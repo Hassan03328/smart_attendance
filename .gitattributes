@@ -1,0 +1,30 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Declare files that will always have LF endings on checkout
+*.sh text eol=lf
+*.dart text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Declare files that will always have CRLF endings on checkout (Windows)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files (do not modify line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.jar binary
+*.keystore binary
+*.zip binary
+*.aar binary
+*.exe binary
+*.dll binary

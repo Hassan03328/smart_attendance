@@ -1,8 +1,8 @@
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
-  static const double universityLat = 21.592414333476388;
-  static const double universityLng = 39.14577137778277;
+  static const double universityLat = 21.568517; 
+  static const double universityLng = 39.221948;
   static const double allowedRadius = 200; // بالمتر
 
   static Future<bool> isInsideUniversity() async {
