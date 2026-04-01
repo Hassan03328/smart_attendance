@@ -1,34 +1,42 @@
 import 'package:flutter/material.dart';
 import '../services/report_service.dart';
+import '../models/user.dart';
 
-class LectureReportScreen extends StatefulWidget {
-  final String lectureId;
-  final String lectureName;
+class StudentAttendanceReportScreen extends StatefulWidget {
+  final AppUser user;
+  final String courseId;
+  final String courseName;
 
-  const LectureReportScreen({
+  const StudentAttendanceReportScreen({
     super.key,
-    required this.lectureId,
-    required this.lectureName,
+    required this.user,
+    required this.courseId,
+    required this.courseName,
   });
 
   @override
-  State<LectureReportScreen> createState() => _LectureReportScreenState();
+  State<StudentAttendanceReportScreen> createState() =>
+      _StudentAttendanceReportScreenState();
 }
 
-class _LectureReportScreenState extends State<LectureReportScreen> {
+class _StudentAttendanceReportScreenState
+    extends State<StudentAttendanceReportScreen> {
   late Future<List<Map<String, dynamic>>> data;
 
   @override
   void initState() {
     super.initState();
-    data = ReportService.getLectureAttendance(widget.lectureId);
+    data = ReportService.getStudentAttendance(
+      studentId: widget.user.uid,
+      courseId: widget.courseId,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.lectureName),
+        title: Text(widget.courseName),
       ),
       body: FutureBuilder(
         future: data,
@@ -49,14 +57,12 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
               final item = list[i];
 
               return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(item['student_name'] ?? ''),
-                subtitle: Text(item['student_email'] ?? ''),
-                trailing: Text(
+                leading: const Icon(Icons.check_circle, color: Colors.green),
+                title: Text(item['lecture_name'] ?? ''),
+                subtitle: Text(
                   item['timestamp'] != null
                       ? item['timestamp'].toDate().toString()
                       : '',
-                  style: const TextStyle(fontSize: 12),
                 ),
               );
             },

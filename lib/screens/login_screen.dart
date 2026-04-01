@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLogin = true;
   bool loading = false;
   String? error;
+  String selectedRole = 'student';
 
   Future<void> submit() async {
     setState(() {
@@ -33,9 +34,15 @@ class _LoginScreenState extends State<LoginScreen> {
         throw 'Password must contain uppercase, lowercase, number and symbol';
       }
 
-      final role = Validators.getRoleFromEmail(email);
-      if (role == null) {
+      final detectedRole = Validators.getRoleFromEmail(email);
+      if (detectedRole == null) {
         throw 'Invalid email domain';
+      }
+
+      if (detectedRole != selectedRole) {
+        throw selectedRole == 'lecturer'
+            ? 'You selected Lecturer, please enter a lecturer email'
+            : 'You selected Student, please enter a student email';
       }
 
       if (isLogin) {
@@ -50,61 +57,184 @@ class _LoginScreenState extends State<LoginScreen> {
             .doc(cred.user!.uid)
             .set({
           'email': email,
-          'name': _name.text.trim(),
-          'role': role,
-          'createdAt': Timestamp.now(),
+          'full_name': _name.text.trim(),
+          'role': selectedRole,
+          'created_at': Timestamp.now(),
         });
       }
     } catch (e) {
-      setState(() => error = e.toString());
+      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
     }
 
     setState(() => loading = false);
   }
 
+  Widget _buildRoleCard({
+    required String value,
+    required String title,
+    required IconData icon,
+  }) {
+    final isSelected = selectedRole == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            selectedRole = value;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? Colors.blue : Colors.grey.shade400,
+              width: 1.5,
+            ),
+            boxShadow: [
+              if (isSelected)
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 28,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xfff7f7fb),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Card(
-            elevation: 6,
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  Icon(
+                    isLogin ? Icons.login : Icons.person_add_alt_1,
+                    size: 42,
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     isLogin ? 'Login' : 'Register',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _buildRoleCard(
+                        value: 'student',
+                        title: 'Student',
+                        icon: Icons.school,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildRoleCard(
+                        value: 'lecturer',
+                        title: 'Lecturer',
+                        icon: Icons.person,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
-                  if (!isLogin)
+                  if (!isLogin) ...[
                     TextField(
                       controller: _name,
-                      decoration: const InputDecoration(labelText: 'Full Name'),
+                      decoration: _inputDecoration('Full Name'),
                     ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 14),
+                  ],
                   TextField(
                     controller: _email,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: _inputDecoration('Email'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: _password,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: _inputDecoration('Password'),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   if (error != null)
-                    Text(error!, style: const TextStyle(color: Colors.red)),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        error!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
                   const SizedBox(height: 20),
-                  loading
-                      ? const CircularProgressIndicator()
-                      : ElevatedButton(
-                          onPressed: submit,
-                          child: Text(isLogin ? 'Login' : 'Register'),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: submit,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(isLogin ? 'Login' : 'Register'),
+                          ),
+                  ),
+                  const SizedBox(height: 10),
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -112,9 +242,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         error = null;
                       });
                     },
-                    child: Text(isLogin
-                        ? 'Create new account'
-                        : 'Already have an account? Login'),
+                    child: Text(
+                      isLogin
+                          ? 'Create new account'
+                          : 'Already have an account? Login',
+                    ),
                   ),
                 ],
               ),

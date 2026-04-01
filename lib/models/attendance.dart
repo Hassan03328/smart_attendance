@@ -11,9 +11,10 @@ class Attendance {
 
   factory Attendance.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
     return Attendance(
-      studentId: data['studentId'],
-      time: data['time'],
+      studentId: data['student_id'] ?? '',
+      time: data['timestamp'] ?? Timestamp.now(),
     );
   }
 }

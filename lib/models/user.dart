@@ -20,9 +20,9 @@ class AppUser {
     return AppUser(
       uid: doc.id,
       email: data['email'] ?? '',
-      fullName: data['full_name'] ?? '',
+      fullName: data['full_name'] ?? data['name'] ?? '',
       role: data['role'] ?? 'student',
-      createdAt: data['created_at'] ?? Timestamp.now(),
+      createdAt: data['created_at'] ?? data['createdAt'] ?? Timestamp.now(),
     );
   }
 }

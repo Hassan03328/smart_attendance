@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/student_courses.dart';
 import '../models/user.dart';
+import 'qr_scan_page.dart';
 
-class StudentHome extends StatelessWidget {
+class StudentCourseDetailsScreen extends StatelessWidget {
   final AppUser user;
+  final String courseId;
+  final String courseName;
 
-  const StudentHome({super.key, required this.user});
+  const StudentCourseDetailsScreen({
+    super.key,
+    required this.user,
+    required this.courseId,
+    required this.courseName,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
+        title: Text(courseName),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -28,13 +26,13 @@ class StudentHome extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome ${user.fullName}',
+              courseName,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 30),
             ElevatedButton.icon(
-              icon: const Icon(Icons.menu_book),
-              label: const Text('My Courses'),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scan QR Code'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16),
               ),
@@ -42,14 +40,18 @@ class StudentHome extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => StudentCoursesScreen(user: user),
+                    builder: (_) => QRScanPage(
+                      user: user,
+                      courseId: courseId,
+                      courseName: courseName,
+                    ),
                   ),
                 );
               },
             ),
             const SizedBox(height: 20),
             const Text(
-              '• Enroll in your courses first\n• Open the course\n• Then scan the QR code for attendance',
+              'Scan the QR code for this course only.',
               style: TextStyle(color: Colors.grey),
             ),
           ],

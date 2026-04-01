@@ -1,109 +1,127 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/user.dart';
-import '../services/location_service.dart';
 
 class QRScanPage extends StatefulWidget {
   final AppUser user;
+  final String courseId;
+  final String courseName;
 
-  const QRScanPage({super.key, required this.user});
+  const QRScanPage({
+    super.key,
+    required this.user,
+    required this.courseId,
+    required this.courseName,
+  });
 
   @override
   State<QRScanPage> createState() => _QRScanPageState();
 }
 
 class _QRScanPageState extends State<QRScanPage> {
-  final MobileScannerController cameraController = MobileScannerController();
-  bool _processing = false;
+  bool processing = false;
 
-  void _showMsg(String msg) {
+  void showMsg(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _markAttendance(String qrCode) async {
-    if (_processing) return;
-    setState(() => _processing = true);
+  Future<void> scan(String code) async {
+    if (processing) return;
+    processing = true;
 
     try {
-      /// ✅ 1. Check location first
-      final inside = await LocationService.isInsideUniversity();
-      if (!inside) {
-        _showMsg('You must be inside the university to mark attendance');
-        setState(() => _processing = false);
-        return;
-      }
-
-      /// ✅ 2. Get lecture by QR
-      final lectureQuery = await FirebaseFirestore.instance
+      final query = await FirebaseFirestore.instance
           .collection('lectures')
-          .where('qr_code', isEqualTo: qrCode)
-          .limit(1)
+          .where('qr_code', isEqualTo: code)
           .get();
 
-      if (lectureQuery.docs.isEmpty) {
-        _showMsg('Invalid QR code');
-        setState(() => _processing = false);
+      if (query.docs.isEmpty) {
+        showMsg('Invalid QR code');
+        processing = false;
         return;
       }
 
-      final lecture = lectureQuery.docs.first;
+      final doc = query.docs.first;
+      final lecture = doc.data();
 
-      /// ✅ 3. Prevent duplicate attendance
-      final alreadyMarked = await FirebaseFirestore.instance
+      // ✅ تحقق من المادة
+      if (lecture['course_id'] != widget.courseId) {
+        showMsg('This QR does not belong to this course');
+        processing = false;
+        return;
+      }
+
+      // ✅ تحقق من الوقت
+      final now = DateTime.now();
+      final start = lecture['start_time'].toDate();
+      final end = lecture['end_time'].toDate();
+
+      if (now.isBefore(start)) {
+        showMsg('Attendance not started yet');
+        processing = false;
+        return;
+      }
+
+      if (now.isAfter(end)) {
+        showMsg('QR expired');
+        processing = false;
+        return;
+      }
+
+      // ✅ منع التكرار
+      final exist = await FirebaseFirestore.instance
           .collection('attendance')
           .where('student_id', isEqualTo: widget.user.uid)
-          .where('lecture_id', isEqualTo: lecture.id)
+          .where('lecture_id', isEqualTo: doc.id)
           .get();
 
-      if (alreadyMarked.docs.isNotEmpty) {
-        _showMsg('Attendance already recorded');
-        setState(() => _processing = false);
+      if (exist.docs.isNotEmpty) {
+        showMsg('Already recorded');
+        processing = false;
         return;
       }
 
-      /// ✅ 4. Save attendance
+      // ✅ تسجيل الحضور
       await FirebaseFirestore.instance.collection('attendance').add({
         'student_id': widget.user.uid,
-        'lecture_id': lecture.id,
+        'student_name': widget.user.fullName,
+        'student_email': widget.user.email,
+        'lecture_id': doc.id,
         'lecture_name': lecture['name'],
+        'course_id': lecture['course_id'],
+        'course_name': lecture['course_name'],
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      _showMsg('Attendance marked successfully');
-      Navigator.pop(context);
+      showMsg('Attendance recorded');
+
+      if (mounted) Navigator.pop(context);
     } catch (e) {
-      _showMsg('Error: $e');
+      showMsg('Error: $e');
     }
 
-    setState(() => _processing = false);
+    processing = false;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan QR Code'),
+        title: Text('Scan QR - ${widget.courseName}'),
       ),
       body: MobileScanner(
-        controller: cameraController,
         onDetect: (capture) {
           for (final barcode in capture.barcodes) {
-            final raw = barcode.rawValue;
-            if (raw != null) {
-              _markAttendance(raw);
+            final code = barcode.rawValue;
+
+            if (code != null) {
+              scan(code);
               break;
             }
           }
         },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    cameraController.dispose();
-    super.dispose();
   }
 }
