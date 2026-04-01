@@ -3,6 +3,20 @@
     <!-- Permission for camera (required for QR scanner) -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
+    <!-- Internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Network / WiFi -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
     <application
         android:label="smart_attendance_app"
         android:name="${applicationName}"
