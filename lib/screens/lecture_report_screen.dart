@@ -24,13 +24,33 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     data = ReportService.getLectureAttendance(widget.lectureId);
   }
 
+  String _formatSource(Map<String, dynamic> item) {
+    final bool insideUniversity = item['inside_university'] == true;
+    final bool onUniversityWifi = item['on_university_wifi'] == true;
+    final String? wifiName = item['wifi_ssid'];
+
+    if (insideUniversity && onUniversityWifi) {
+      return 'Inside university + WiFi (${wifiName ?? 'Unknown'})';
+    }
+
+    if (insideUniversity) {
+      return 'Inside university';
+    }
+
+    if (onUniversityWifi) {
+      return 'University WiFi (${wifiName ?? 'Unknown'})';
+    }
+
+    return 'Unknown';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.lectureName),
+        title: Text('Report - ${widget.lectureName}'),
       ),
-      body: FutureBuilder(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: data,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -48,15 +68,32 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
             itemBuilder: (context, i) {
               final item = list[i];
 
-              return ListTile(
-                leading: const Icon(Icons.person),
-                title: Text(item['student_name'] ?? ''),
-                subtitle: Text(item['student_email'] ?? ''),
-                trailing: Text(
-                  item['timestamp'] != null
-                      ? item['timestamp'].toDate().toString()
-                      : '',
-                  style: const TextStyle(fontSize: 12),
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  leading: const Icon(Icons.person),
+                  title: Text(item['student_name'] ?? 'Unknown'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item['student_email'] ?? ''),
+                      const SizedBox(height: 4),
+                      Text(
+                        item['timestamp'] != null
+                            ? item['timestamp'].toDate().toString()
+                            : '',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatSource(item),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

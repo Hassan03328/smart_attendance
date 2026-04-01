@@ -5,7 +5,8 @@ class ReportService {
 
   // دكتور - كل حضور محاضرة
   static Future<List<Map<String, dynamic>>> getLectureAttendance(
-      String lectureId) async {
+    String lectureId,
+  ) async {
     final snapshot = await _db
         .collection('attendance')
         .where('lecture_id', isEqualTo: lectureId)
