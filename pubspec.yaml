@@ -26,6 +26,9 @@ dependencies:
   network_info_plus: ^6.1.4
   permission_handler: ^11.3.1
 
+  pdf: ^3.10.8
+  printing: ^5.13.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

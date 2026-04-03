@@ -69,6 +69,37 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => loading = false);
   }
 
+  Future<void> forgotPassword() async {
+    final email = _email.text.trim();
+
+    if (email.isEmpty) {
+      setState(() {
+        error = 'Please enter your email first';
+      });
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset email sent'),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        error = e.message ?? 'Failed to send reset email';
+      });
+    } catch (e) {
+      setState(() {
+        error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
   Widget _buildRoleCard({
     required String value,
     required String title,
@@ -234,6 +265,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(isLogin ? 'Login' : 'Register'),
                           ),
                   ),
+                  if (isLogin) ...[
+                    const SizedBox(height: 10),
+                    TextButton(
+                      onPressed: forgotPassword,
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   TextButton(
                     onPressed: () {

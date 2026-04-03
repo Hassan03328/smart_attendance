@@ -1,12 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/student_courses.dart';
 import '../models/user.dart';
+import '../services/report_service.dart';
+import 'student_courses.dart';
+import 'student_course_details.dart';
 
-class StudentHome extends StatelessWidget {
+class StudentHome extends StatefulWidget {
   final AppUser user;
 
   const StudentHome({super.key, required this.user});
+
+  @override
+  State<StudentHome> createState() => _StudentHomeState();
+}
+
+class _StudentHomeState extends State<StudentHome> {
+  late Future<Map<String, dynamic>> summaryFuture;
+  late Future<List<Map<String, dynamic>>> coursesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  void _refresh() {
+    setState(() {
+      summaryFuture =
+          ReportService.getStudentDashboardSummary(studentId: widget.user.uid);
+      coursesFuture =
+          ReportService.getStudentCoursesDashboard(studentId: widget.user.uid);
+    });
+  }
+
+  Color _color(double value) {
+    if (value >= 75) return Colors.green;
+    if (value >= 50) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _card(String title, String value, IconData icon) {
+    return Expanded(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(icon),
+              const SizedBox(height: 6),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(title),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,43 +65,155 @@ class StudentHome extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
+          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
+            onPressed: () async => FirebaseAuth.instance.signOut(),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: RefreshIndicator(
+        onRefresh: () async => _refresh(),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            Text(
-              'Welcome ${user.fullName}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.menu_book),
-              label: const Text('My Courses'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StudentCoursesScreen(user: user),
-                  ),
+            Text('Welcome ${widget.user.fullName}',
+                style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            FutureBuilder<Map<String, dynamic>>(
+              future: summaryFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final s = snapshot.data!;
+                final p = (s['attendance_percentage'] ?? 0.0).toDouble();
+
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        _card('Courses', '${s['enrolled_courses']}',
+                            Icons.menu_book),
+                        _card(
+                            'Lectures', '${s['total_lectures']}', Icons.class_),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        _card('Present', '${s['present_count']}',
+                            Icons.check_circle),
+                        _card('Late', '${s['late_count']}', Icons.schedule),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        _card('Absent', '${s['absent_count']}', Icons.cancel),
+                        _card('Attendance %', '${p.toStringAsFixed(1)}%',
+                            Icons.percent),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: p / 100,
+                      minHeight: 8,
+                      color: _color(p),
+                    ),
+                  ],
                 );
               },
             ),
             const SizedBox(height: 20),
-            const Text(
-              '• Enroll in your courses first\n• Open the course\n• Then scan the QR code for attendance',
-              style: TextStyle(color: Colors.grey),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'My Courses Overview',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StudentCoursesScreen(user: widget.user),
+                      ),
+                    );
+                  },
+                  child: const Text('Manage Courses'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: coursesFuture,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final courses = snapshot.data!;
+                if (courses.isEmpty) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('No enrolled courses yet'),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: courses.map((course) {
+                    final p =
+                        (course['attendance_percentage'] ?? 0.0).toDouble();
+                    final section = course['section'] ?? '';
+                    final title = section.toString().isEmpty
+                        ? course['course_name']
+                        : '${course['course_name']} - Section $section';
+
+                    return Card(
+                      child: ListTile(
+                        title: Text(title),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Present: ${course['present_count']} | Late: ${course['late_count']} | Absent: ${course['absent_count']}',
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Attendance: ${p.toStringAsFixed(1)}% (${course['attended_lectures']}/${course['total_lectures']})',
+                            ),
+                            const SizedBox(height: 6),
+                            LinearProgressIndicator(
+                              value: p / 100,
+                              minHeight: 6,
+                              color: _color(p),
+                            ),
+                          ],
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StudentCourseDetailsScreen(
+                                  user: widget.user,
+                                  courseId: course['course_id'],
+                                  courseName: course['course_name'],
+                                  section: section,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Open'),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             ),
           ],
         ),
