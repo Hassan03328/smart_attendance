@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/report_service.dart';
 
 class LecturerCourseStudentsScreen extends StatefulWidget {
@@ -66,8 +67,10 @@ class _LecturerCourseStudentsScreenState
                 }
 
                 final students = snapshot.data!.where((student) {
-                  final name = (student['student_name'] ?? '').toLowerCase();
-                  final email = (student['student_email'] ?? '').toLowerCase();
+                  final name =
+                      (student['student_name'] ?? '').toString().toLowerCase();
+                  final email =
+                      (student['student_email'] ?? '').toString().toLowerCase();
                   return name.contains(search) || email.contains(search);
                 }).toList();
 
@@ -84,11 +87,15 @@ class _LecturerCourseStudentsScreenState
 
                     return Card(
                       child: ListTile(
-                        title: Text(student['student_name'] ?? ''),
+                        title: Text(
+                          (student['student_name'] ?? '').toString(),
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(student['student_email'] ?? ''),
+                            Text(
+                              (student['student_email'] ?? '').toString(),
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               'Present: ${student['present_count']} | Late: ${student['late_count']} | Absent: ${student['absent_count']}',

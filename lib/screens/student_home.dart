@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/user.dart';
 import '../services/report_service.dart';
-import 'student_courses.dart';
 import 'student_course_details.dart';
+import 'student_courses.dart';
 
 class StudentHome extends StatefulWidget {
   final AppUser user;
@@ -21,15 +22,19 @@ class _StudentHomeState extends State<StudentHome> {
   @override
   void initState() {
     super.initState();
-    _refresh();
+    _refreshData();
   }
 
-  void _refresh() {
+  void _refreshData() {
+    summaryFuture =
+        ReportService.getStudentDashboardSummary(studentId: widget.user.uid);
+    coursesFuture =
+        ReportService.getStudentCoursesDashboard(studentId: widget.user.uid);
+  }
+
+  Future<void> _refresh() async {
     setState(() {
-      summaryFuture =
-          ReportService.getStudentDashboardSummary(studentId: widget.user.uid);
-      coursesFuture =
-          ReportService.getStudentCoursesDashboard(studentId: widget.user.uid);
+      _refreshData();
     });
   }
 
@@ -48,9 +53,13 @@ class _StudentHomeState extends State<StudentHome> {
             children: [
               Icon(icon),
               const SizedBox(height: 6),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               Text(title),
             ],
           ),
@@ -65,20 +74,27 @@ class _StudentHomeState extends State<StudentHome> {
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
-          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
           IconButton(
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+            },
             icon: const Icon(Icons.logout),
-            onPressed: () async => FirebaseAuth.instance.signOut(),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _refresh(),
+        onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('Welcome ${widget.user.fullName}',
-                style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Welcome ${widget.user.fullName}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 16),
             FutureBuilder<Map<String, dynamic>>(
               future: summaryFuture,
@@ -86,6 +102,7 @@ class _StudentHomeState extends State<StudentHome> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 final s = snapshot.data!;
                 final p = (s['attendance_percentage'] ?? 0.0).toDouble();
 
@@ -93,24 +110,44 @@ class _StudentHomeState extends State<StudentHome> {
                   children: [
                     Row(
                       children: [
-                        _card('Courses', '${s['enrolled_courses']}',
-                            Icons.menu_book),
                         _card(
-                            'Lectures', '${s['total_lectures']}', Icons.class_),
+                          'Courses',
+                          '${s['enrolled_courses']}',
+                          Icons.menu_book,
+                        ),
+                        _card(
+                          'Lectures',
+                          '${s['total_lectures']}',
+                          Icons.class_,
+                        ),
                       ],
                     ),
                     Row(
                       children: [
-                        _card('Present', '${s['present_count']}',
-                            Icons.check_circle),
-                        _card('Late', '${s['late_count']}', Icons.schedule),
+                        _card(
+                          'Present',
+                          '${s['present_count']}',
+                          Icons.check_circle,
+                        ),
+                        _card(
+                          'Late',
+                          '${s['late_count']}',
+                          Icons.schedule,
+                        ),
                       ],
                     ),
                     Row(
                       children: [
-                        _card('Absent', '${s['absent_count']}', Icons.cancel),
-                        _card('Attendance %', '${p.toStringAsFixed(1)}%',
-                            Icons.percent),
+                        _card(
+                          'Absent',
+                          '${s['absent_count']}',
+                          Icons.cancel,
+                        ),
+                        _card(
+                          'Attendance %',
+                          '${p.toStringAsFixed(1)}%',
+                          Icons.percent,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -129,7 +166,10 @@ class _StudentHomeState extends State<StudentHome> {
                 const Expanded(
                   child: Text(
                     'My Courses Overview',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 TextButton(
@@ -154,6 +194,7 @@ class _StudentHomeState extends State<StudentHome> {
                 }
 
                 final courses = snapshot.data!;
+
                 if (courses.isEmpty) {
                   return const Card(
                     child: Padding(
@@ -167,10 +208,12 @@ class _StudentHomeState extends State<StudentHome> {
                   children: courses.map((course) {
                     final p =
                         (course['attendance_percentage'] ?? 0.0).toDouble();
-                    final section = course['section'] ?? '';
-                    final title = section.toString().isEmpty
-                        ? course['course_name']
-                        : '${course['course_name']} - Section $section';
+                    final section = (course['section'] ?? '').toString();
+                    final courseName = (course['course_name'] ?? '').toString();
+
+                    final title = section.isEmpty
+                        ? courseName
+                        : '$courseName - Section $section';
 
                     return Card(
                       child: ListTile(
@@ -200,8 +243,9 @@ class _StudentHomeState extends State<StudentHome> {
                               MaterialPageRoute(
                                 builder: (_) => StudentCourseDetailsScreen(
                                   user: widget.user,
-                                  courseId: course['course_id'],
-                                  courseName: course['course_name'],
+                                  courseId:
+                                      (course['course_id'] ?? '').toString(),
+                                  courseName: courseName,
                                   section: section,
                                 ),
                               ),
