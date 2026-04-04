@@ -21,6 +21,7 @@ class _LecturerCourseStudentsScreenState
     extends State<LecturerCourseStudentsScreen> {
   late Future<List<Map<String, dynamic>>> studentsFuture;
   String search = '';
+  String? savingStudentId;
 
   @override
   void initState() {
@@ -29,10 +30,106 @@ class _LecturerCourseStudentsScreenState
         ReportService.getCourseStudentsSummary(courseId: widget.courseId);
   }
 
+  void _reload() {
+    setState(() {
+      studentsFuture =
+          ReportService.getCourseStudentsSummary(courseId: widget.courseId);
+    });
+  }
+
   Color _color(double value) {
     if (value >= 75) return Colors.green;
     if (value >= 50) return Colors.orange;
     return Colors.red;
+  }
+
+  Future<void> _markAttendance(
+    Map<String, dynamic> student,
+    String status,
+  ) async {
+    setState(() {
+      savingStudentId = (student['student_id'] ?? '').toString();
+    });
+
+    try {
+      await ReportService.markAttendanceManuallyFromCourse(
+        courseId: widget.courseId,
+        courseName: widget.courseName,
+        studentId: (student['student_id'] ?? '').toString(),
+        studentName: (student['student_name'] ?? '').toString(),
+        studentEmail: (student['student_email'] ?? '').toString(),
+        status: status,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Marked as $status')),
+      );
+      _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      savingStudentId = null;
+    });
+  }
+
+  Widget _manualButtons(Map<String, dynamic> student) {
+    final studentId = (student['student_id'] ?? '').toString();
+    final loading = savingStudentId == studentId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        const Text(
+          'Manual Attendance',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed:
+                    loading ? null : () => _markAttendance(student, 'Present'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: loading
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Present'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed:
+                    loading ? null : () => _markAttendance(student, 'Late'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                child: const Text('Late'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed:
+                    loading ? null : () => _markAttendance(student, 'Absent'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Absent'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
@@ -86,13 +183,19 @@ class _LecturerCourseStudentsScreenState
                         (student['attendance_percentage'] ?? 0.0).toDouble();
 
                     return Card(
-                      child: ListTile(
-                        title: Text(
-                          (student['student_name'] ?? '').toString(),
-                        ),
-                        subtitle: Column(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              (student['student_name'] ?? '').toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
                             Text(
                               (student['student_email'] ?? '').toString(),
                             ),
@@ -110,6 +213,7 @@ class _LecturerCourseStudentsScreenState
                               minHeight: 6,
                               color: _color(p),
                             ),
+                            _manualButtons(student),
                           ],
                         ),
                       ),

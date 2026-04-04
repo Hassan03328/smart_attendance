@@ -8,6 +8,7 @@ import '../models/user.dart';
 import '../services/report_service.dart';
 import 'lecture_report_screen.dart';
 import 'lecturer_course_students_screen.dart';
+import 'login_screen.dart';
 
 class LecturerHome extends StatefulWidget {
   final AppUser user;
@@ -50,6 +51,7 @@ class _LecturerHomeState extends State<LecturerHome>
     _tabController = TabController(length: 3, vsync: this);
     dashboardFuture =
         ReportService.getLecturerDashboardSummary(lecturerId: widget.user.uid);
+    _loadActiveLecture();
     _startTimer();
   }
 
@@ -63,6 +65,28 @@ class _LecturerHomeState extends State<LecturerHome>
     _buildingController.dispose();
     _roomController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadActiveLecture() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('lectures')
+        .where('lecturer_id', isEqualTo: widget.user.uid)
+        .where('is_active', isEqualTo: true)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return;
+
+    final doc = snapshot.docs.first;
+    final data = doc.data();
+    final endTime = data['end_time'];
+
+    setState(() {
+      activeLectureId = doc.id;
+      qrData = doc.id;
+      activeLectureOpen = true;
+      activeLectureEndTime = endTime is Timestamp ? endTime.toDate() : null;
+    });
   }
 
   void _refreshDashboard() {
@@ -97,33 +121,85 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  Future<void> _deleteCourse(String courseId, String courseName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Course'),
+        content: Text('Are you sure you want to delete $courseName?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await ReportService.deleteCourse(courseId);
+    _refreshDashboard();
+    _notify('Course deleted successfully');
+  }
+
   void _startTimer() {
     _timer?.cancel();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!mounted) return;
 
-      if (activeLectureEndTime == null || !activeLectureOpen) {
-        setState(() {
-          _remaining = Duration.zero;
-        });
-        return;
-      }
-
-      final diff = activeLectureEndTime!.difference(DateTime.now());
-
-      if (diff.isNegative || diff.inSeconds <= 0) {
+      if (activeLectureId == null) {
         setState(() {
           _remaining = Duration.zero;
           activeLectureOpen = false;
         });
+        return;
+      }
 
-        if (activeLectureId != null) {
-          await FirebaseFirestore.instance
-              .collection('lectures')
-              .doc(activeLectureId)
-              .update({'is_active': false});
-        }
+      final doc = await FirebaseFirestore.instance
+          .collection('lectures')
+          .doc(activeLectureId)
+          .get();
+
+      if (!doc.exists) {
+        setState(() {
+          _remaining = Duration.zero;
+          activeLectureOpen = false;
+          qrData = null;
+          activeLectureId = null;
+          activeLectureEndTime = null;
+        });
+        return;
+      }
+
+      final data = doc.data()!;
+      final isActive = (data['is_active'] ?? false) == true;
+      final endTime = data['end_time'];
+
+      if (!isActive || endTime is! Timestamp) {
+        setState(() {
+          _remaining = Duration.zero;
+          activeLectureOpen = false;
+        });
+        return;
+      }
+
+      final end = endTime.toDate();
+      final diff = end.difference(DateTime.now());
+
+      if (diff.isNegative || diff.inSeconds <= 0) {
+        await doc.reference.update({'is_active': false});
+
+        setState(() {
+          _remaining = Duration.zero;
+          activeLectureOpen = false;
+          activeLectureEndTime = end;
+        });
 
         _showDialogMessage(
           'Lecture Closed',
@@ -137,6 +213,10 @@ class _LecturerHomeState extends State<LecturerHome>
       }
 
       setState(() {
+        qrData = doc.id;
+        activeLectureId = doc.id;
+        activeLectureEndTime = end;
+        activeLectureOpen = true;
         _remaining = diff;
       });
     });
@@ -376,19 +456,29 @@ class _LecturerHomeState extends State<LecturerHome>
                   return Card(
                     child: ListTile(
                       title: Text(title),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LecturerCourseStudentsScreen(
-                                courseId: doc.id,
-                                courseName: title,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text('Students'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LecturerCourseStudentsScreen(
+                                    courseId: doc.id,
+                                    courseName: title,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Students'),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _deleteCourse(doc.id, title),
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -469,19 +559,29 @@ class _LecturerHomeState extends State<LecturerHome>
                 return Card(
                   child: ListTile(
                     title: Text(title),
-                    trailing: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LecturerCourseStudentsScreen(
-                              courseId: doc.id,
-                              courseName: title,
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text('Students'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LecturerCourseStudentsScreen(
+                                  courseId: doc.id,
+                                  courseName: title,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text('Students'),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _deleteCourse(doc.id, title),
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -804,7 +904,19 @@ class _LecturerHomeState extends State<LecturerHome>
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async => FirebaseAuth.instance.signOut(),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+
+              if (!context.mounted) return;
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LoginScreen(),
+                ),
+                (route) => false,
+              );
+            },
           ),
         ],
       ),

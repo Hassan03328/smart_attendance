@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/report_service.dart';
 import 'student_course_details.dart';
 import 'student_courses.dart';
+import 'login_screen.dart';
 
 class StudentHome extends StatefulWidget {
   final AppUser user;
@@ -81,6 +82,16 @@ class _StudentHomeState extends State<StudentHome> {
           IconButton(
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
+
+              if (!context.mounted) return;
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LoginScreen(),
+                ),
+                (route) => false,
+              );
             },
             icon: const Icon(Icons.logout),
           ),

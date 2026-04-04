@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../models/user.dart';
 import '../utils/validators.dart';
+import 'lecturer_home.dart';
+import 'student_home.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,6 +24,26 @@ class _LoginScreenState extends State<LoginScreen> {
   String? error;
   String selectedRole = 'student';
 
+  Future<void> _goToHome(AppUser appUser) async {
+    if (!mounted) return;
+
+    if (appUser.role == 'lecturer') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LecturerHome(user: appUser),
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentHome(user: appUser),
+        ),
+      );
+    }
+  }
+
   Future<void> submit() async {
     setState(() {
       loading = true;
@@ -29,6 +53,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final email = _email.text.trim();
       final password = _password.text.trim();
+      final fullName = _name.text.trim();
+
+      if (email.isEmpty || password.isEmpty) {
+        throw 'Please enter email and password';
+      }
 
       if (!Validators.isValidPassword(password)) {
         throw 'Password must contain uppercase, lowercase, number and symbol';
@@ -46,27 +75,78 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (isLogin) {
-        await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email, password: password);
+        // # LOGIN
+        final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(cred.user!.uid)
+            .get();
+
+        if (!userDoc.exists) {
+          throw 'User data not found in database';
+        }
+
+        final appUser = AppUser.fromFirestore(userDoc);
+        await _goToHome(appUser);
       } else {
-        final cred = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
+        // # REGISTER
+        if (fullName.isEmpty) {
+          throw 'Please enter full name';
+        }
+
+        final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
 
         await FirebaseFirestore.instance
             .collection('users')
             .doc(cred.user!.uid)
             .set({
           'email': email,
-          'full_name': _name.text.trim(),
+          'full_name': fullName,
           'role': selectedRole,
           'created_at': Timestamp.now(),
         });
+
+        final newUserDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(cred.user!.uid)
+            .get();
+
+        final appUser = AppUser.fromFirestore(newUserDoc);
+        await _goToHome(appUser);
       }
+    } on FirebaseAuthException catch (e) {
+      String msg = e.message ?? 'Authentication failed';
+
+      if (e.code == 'email-already-in-use') {
+        msg = 'This email is already registered';
+      } else if (e.code == 'invalid-credential') {
+        msg = 'Invalid email or password';
+      } else if (e.code == 'user-not-found') {
+        msg = 'No account found for this email';
+      } else if (e.code == 'wrong-password') {
+        msg = 'Wrong password';
+      }
+
+      setState(() {
+        error = msg;
+      });
     } catch (e) {
-      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() {
+        error = e.toString().replaceFirst('Exception: ', '');
+      });
     }
 
-    setState(() => loading = false);
+    if (!mounted) return;
+    setState(() {
+      loading = false;
+    });
   }
 
   Future<void> forgotPassword() async {
@@ -169,6 +249,14 @@ class _LoginScreenState extends State<LoginScreen> {
         borderSide: BorderSide(color: Colors.grey.shade300),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _name.dispose();
+    super.dispose();
   }
 
   @override

@@ -400,6 +400,46 @@ class ReportService {
     return result;
   }
 
+  // # GET ACTIVE OR LATEST LECTURE FOR MANUAL ATTENDANCE
+  static Future<Map<String, dynamic>?> getBestLectureForManualAttendance({
+    required String courseId,
+  }) async {
+    final activeSnapshot = await _db
+        .collection('lectures')
+        .where('course_id', isEqualTo: courseId)
+        .where('is_active', isEqualTo: true)
+        .get();
+
+    if (activeSnapshot.docs.isNotEmpty) {
+      final doc = activeSnapshot.docs.first;
+      final data = doc.data();
+      data['doc_id'] = doc.id;
+      return data;
+    }
+
+    final allLectures = await _db
+        .collection('lectures')
+        .where('course_id', isEqualTo: courseId)
+        .get();
+
+    if (allLectures.docs.isEmpty) return null;
+
+    allLectures.docs.sort((a, b) {
+      final aTime = a.data()['created_at'];
+      final bTime = b.data()['created_at'];
+
+      if (aTime is! Timestamp && bTime is! Timestamp) return 0;
+      if (aTime is! Timestamp) return 1;
+      if (bTime is! Timestamp) return -1;
+      return bTime.compareTo(aTime);
+    });
+
+    final doc = allLectures.docs.first;
+    final data = doc.data();
+    data['doc_id'] = doc.id;
+    return data;
+  }
+
   static Future<void> markAttendanceManually({
     required String lectureId,
     required String lectureName,
@@ -411,6 +451,7 @@ class ReportService {
     required String studentId,
     required String studentName,
     required String studentEmail,
+    required String status,
   }) async {
     final existing = await _db
         .collection('attendance')
@@ -418,7 +459,17 @@ class ReportService {
         .where('student_id', isEqualTo: studentId)
         .get();
 
-    if (existing.docs.isNotEmpty) return;
+    if (existing.docs.isNotEmpty) {
+      for (final doc in existing.docs) {
+        await doc.reference.update({
+          'status': status,
+          'marked_manually': true,
+          'manual_by_lecturer': true,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      return;
+    }
 
     await _db.collection('attendance').add({
       'student_id': studentId,
@@ -435,10 +486,40 @@ class ReportService {
       'inside_university': false,
       'on_university_wifi': false,
       'wifi_ssid': null,
-      'status': 'Present',
+      'status': status,
       'marked_manually': true,
       'manual_by_lecturer': true,
     });
+  }
+
+  // # MANUAL ATTENDANCE FROM COURSE SCREEN
+  static Future<void> markAttendanceManuallyFromCourse({
+    required String courseId,
+    required String courseName,
+    required String studentId,
+    required String studentName,
+    required String studentEmail,
+    required String status,
+  }) async {
+    final lecture = await getBestLectureForManualAttendance(courseId: courseId);
+
+    if (lecture == null) {
+      throw 'Create a lecture first before manual attendance';
+    }
+
+    await markAttendanceManually(
+      lectureId: (lecture['doc_id'] ?? '').toString(),
+      lectureName: (lecture['name'] ?? 'Lecture').toString(),
+      courseId: courseId,
+      courseName: courseName,
+      section: (lecture['section'] ?? '').toString(),
+      building: lecture['building']?.toString(),
+      room: lecture['room']?.toString(),
+      studentId: studentId,
+      studentName: studentName,
+      studentEmail: studentEmail,
+      status: status,
+    );
   }
 
   static Future<void> deleteAttendance({
@@ -454,6 +535,47 @@ class ReportService {
     for (final doc in snapshot.docs) {
       await doc.reference.delete();
     }
+  }
+
+  // # DELETE COURSE WITH RELATED DATA
+  static Future<void> deleteCourse(String courseId) async {
+    final lecturesSnapshot = await _db
+        .collection('lectures')
+        .where('course_id', isEqualTo: courseId)
+        .get();
+
+    for (final lecture in lecturesSnapshot.docs) {
+      final attendanceByLecture = await _db
+          .collection('attendance')
+          .where('lecture_id', isEqualTo: lecture.id)
+          .get();
+
+      for (final attendance in attendanceByLecture.docs) {
+        await attendance.reference.delete();
+      }
+
+      await lecture.reference.delete();
+    }
+
+    final attendanceByCourse = await _db
+        .collection('attendance')
+        .where('course_id', isEqualTo: courseId)
+        .get();
+
+    for (final doc in attendanceByCourse.docs) {
+      await doc.reference.delete();
+    }
+
+    final enrollmentsSnapshot = await _db
+        .collection('enrollments')
+        .where('course_id', isEqualTo: courseId)
+        .get();
+
+    for (final doc in enrollmentsSnapshot.docs) {
+      await doc.reference.delete();
+    }
+
+    await _db.collection('courses').doc(courseId).delete();
   }
 
   static Future<Map<String, dynamic>?> getLectureInfo(String lectureId) async {

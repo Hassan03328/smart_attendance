@@ -21,6 +21,7 @@ class LectureReportScreen extends StatefulWidget {
 class _LectureReportScreenState extends State<LectureReportScreen> {
   late Future<List<Map<String, dynamic>>> data;
   String search = '';
+  String? savingStudentId;
 
   @override
   void initState() {
@@ -58,7 +59,55 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     if (inside && wifi) return 'Inside + WiFi';
     if (inside) return 'Inside university';
     if (wifi) return 'University WiFi';
-    return 'Unknown';
+    return 'QR / Unknown';
+  }
+
+  Future<void> _markManualStudent(
+    Map<String, dynamic> student,
+    String status,
+  ) async {
+    setState(() {
+      savingStudentId = (student['student_id'] ?? '').toString();
+    });
+
+    try {
+      final lectureInfo = await ReportService.getLectureInfo(widget.lectureId);
+      final courseInfo = await ReportService.getCourseInfo(widget.courseId);
+
+      await ReportService.markAttendanceManually(
+        lectureId: widget.lectureId,
+        lectureName: widget.lectureName,
+        courseId: widget.courseId,
+        courseName: (courseInfo?['name'] ?? 'Course').toString(),
+        section: (courseInfo?['section'] ?? '').toString(),
+        building: lectureInfo?['building']?.toString(),
+        room: lectureInfo?['room']?.toString(),
+        studentId: (student['student_id'] ?? '').toString(),
+        studentName: (student['student_name'] ?? '').toString(),
+        studentEmail: (student['student_email'] ?? '').toString(),
+        status: status,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _reload();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Attendance marked as $status')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      savingStudentId = null;
+    });
   }
 
   Future<void> _openManualAttendanceDialog() async {
@@ -84,8 +133,10 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             final filtered = students.where((student) {
-              final name = (student['student_name'] ?? '').toLowerCase();
-              final email = (student['student_email'] ?? '').toLowerCase();
+              final name =
+                  (student['student_name'] ?? '').toString().toLowerCase();
+              final email =
+                  (student['student_email'] ?? '').toString().toLowerCase();
               return name.contains(localSearch) || email.contains(localSearch);
             }).toList();
 
@@ -93,7 +144,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
               title: const Text('Manual Attendance'),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 420,
+                height: 430,
                 child: Column(
                   children: [
                     TextField(
@@ -116,74 +167,89 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                               itemCount: filtered.length,
                               itemBuilder: (context, index) {
                                 final student = filtered[index];
+                                final studentId =
+                                    (student['student_id'] ?? '').toString();
+                                final loading = savingStudentId == studentId;
+
                                 return Card(
-                                  child: ListTile(
-                                    title: Text(student['student_name'] ?? ''),
-                                    subtitle:
-                                        Text(student['student_email'] ?? ''),
-                                    trailing: ElevatedButton(
-                                      onPressed: () async {
-                                        final lectureInfo =
-                                            await ReportService.getLectureInfo(
-                                          widget.lectureId,
-                                        );
-                                        final courseInfo =
-                                            await ReportService.getCourseInfo(
-                                          widget.courseId,
-                                        );
-
-                                        if (lectureInfo == null ||
-                                            courseInfo == null) {
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                    'Failed to load lecture data'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          (student['student_name'] ?? '')
+                                              .toString(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          (student['student_email'] ?? '')
+                                              .toString(),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: loading
+                                                    ? null
+                                                    : () => _markManualStudent(
+                                                          student,
+                                                          'Present',
+                                                        ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green,
+                                                ),
+                                                child: loading
+                                                    ? const SizedBox(
+                                                        height: 16,
+                                                        width: 16,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      )
+                                                    : const Text('Present'),
                                               ),
-                                            );
-                                          }
-                                          return;
-                                        }
-
-                                        await ReportService
-                                            .markAttendanceManually(
-                                          lectureId: widget.lectureId,
-                                          lectureName: widget.lectureName,
-                                          courseId: widget.courseId,
-                                          courseName: (courseInfo['name'] ?? '')
-                                              .toString(),
-                                          section: (courseInfo['section'] ?? '')
-                                              .toString(),
-                                          building: lectureInfo['building']
-                                              ?.toString(),
-                                          room: lectureInfo['room']?.toString(),
-                                          studentId:
-                                              (student['student_id'] ?? '')
-                                                  .toString(),
-                                          studentName:
-                                              (student['student_name'] ?? '')
-                                                  .toString(),
-                                          studentEmail:
-                                              (student['student_email'] ?? '')
-                                                  .toString(),
-                                        );
-
-                                        if (mounted) {
-                                          Navigator.pop(context);
-                                          setState(() {
-                                            _reload();
-                                          });
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'Attendance marked manually'),
                                             ),
-                                          );
-                                        }
-                                      },
-                                      child: const Text('Mark'),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: loading
+                                                    ? null
+                                                    : () => _markManualStudent(
+                                                          student,
+                                                          'Late',
+                                                        ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.orange,
+                                                ),
+                                                child: const Text('Late'),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                onPressed: loading
+                                                    ? null
+                                                    : () => _markManualStudent(
+                                                          student,
+                                                          'Absent',
+                                                        ),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                                child: const Text('Absent'),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
@@ -198,6 +264,17 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
         );
       },
     );
+  }
+
+  Future<void> _deleteAttendanceItem(Map<String, dynamic> item) async {
+    await ReportService.deleteAttendance(
+      lectureId: widget.lectureId,
+      studentId: (item['student_id'] ?? '').toString(),
+    );
+
+    setState(() {
+      _reload();
+    });
   }
 
   @override
@@ -248,8 +325,10 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                 }
 
                 final list = snapshot.data!.where((item) {
-                  final name = (item['student_name'] ?? '').toLowerCase();
-                  final email = (item['student_email'] ?? '').toLowerCase();
+                  final name =
+                      (item['student_name'] ?? '').toString().toLowerCase();
+                  final email =
+                      (item['student_email'] ?? '').toString().toLowerCase();
                   return name.contains(search) || email.contains(search);
                 }).toList();
 
@@ -261,23 +340,24 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                   itemCount: list.length,
                   itemBuilder: (context, i) {
                     final item = list[i];
-                    final status = item['status'] ?? 'Unknown';
-                    final p = (item['attendance_percentage'] ?? 0).toDouble();
+                    final status = (item['status'] ?? 'Unknown').toString();
+                    final p =
+                        ((item['attendance_percentage'] ?? 0) as num).toDouble();
 
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: _statusColor(status),
                           child: Text(
-                            status[0],
+                            status.isNotEmpty ? status[0] : '?',
                             style: const TextStyle(color: Colors.white),
                           ),
                         ),
-                        title: Text(item['student_name'] ?? ''),
+                        title: Text((item['student_name'] ?? '').toString()),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item['student_email'] ?? ''),
+                            Text((item['student_email'] ?? '').toString()),
                             const SizedBox(height: 4),
                             Text('Status: $status'),
                             const SizedBox(height: 4),
@@ -293,18 +373,11 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                         trailing: status == 'Absent'
                             ? null
                             : IconButton(
-                                icon:
-                                    const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () async {
-                                  await ReportService.deleteAttendance(
-                                    lectureId: widget.lectureId,
-                                    studentId: item['student_id'],
-                                  );
-
-                                  setState(() {
-                                    _reload();
-                                  });
-                                },
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => _deleteAttendanceItem(item),
                               ),
                       ),
                     );
