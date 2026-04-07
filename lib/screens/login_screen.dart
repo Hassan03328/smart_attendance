@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_attendance_app/main.dart';
 
 import '../models/user.dart';
 import '../utils/validators.dart';
@@ -186,6 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icon,
   }) {
     final isSelected = selectedRole == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: GestureDetector(
@@ -198,16 +200,21 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.blue : Colors.grey.shade100,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? Colors.blue : Colors.grey.shade400,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : (isDark ? const Color(0xFF334155) : Colors.grey.shade400),
               width: 1.5,
             ),
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: Colors.blue.withOpacity(0.18),
+                  color:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.18),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -218,13 +225,17 @@ class _LoginScreenState extends State<LoginScreen> {
               Icon(
                 icon,
                 size: 28,
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected
+                    ? (isDark ? Colors.black : Colors.white)
+                    : Theme.of(context).iconTheme.color,
               ),
               const SizedBox(height: 8),
               Text(
                 title,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.black87,
+                  color: isSelected
+                      ? (isDark ? Colors.black : Colors.white)
+                      : Theme.of(context).textTheme.bodyMedium?.color,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -239,15 +250,13 @@ class _LoginScreenState extends State<LoginScreen> {
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: Theme.of(context).inputDecorationTheme.fillColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
-      ),
+      enabledBorder: Theme.of(context).inputDecorationTheme.enabledBorder,
+      focusedBorder: Theme.of(context).inputDecorationTheme.focusedBorder,
     );
   }
 
@@ -261,8 +270,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xfff7f7fb),
+      appBar: AppBar(
+        title: Text(isLogin ? 'Login' : 'Register'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              MyApp.of(context).toggleTheme();
+            },
+          ),
+        ],
+      ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -271,6 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
+            color: Theme.of(context).cardColor,
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
@@ -279,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Icon(
                     isLogin ? Icons.login : Icons.person_add_alt_1,
                     size: 42,
-                    color: Colors.blue,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -328,13 +353,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color: isDark
+                            ? Colors.red.withOpacity(0.15)
+                            : Colors.red.shade50,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.shade200),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.red.withOpacity(0.35)
+                              : Colors.red.shade200,
+                        ),
                       ),
                       child: Text(
                         error!,
-                        style: TextStyle(color: Colors.red.shade700),
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.red.shade200
+                              : Colors.red.shade700,
+                        ),
                       ),
                     ),
                   const SizedBox(height: 20),

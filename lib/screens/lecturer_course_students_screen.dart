@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_attendance_app/main.dart';
 
 import '../services/report_service.dart';
 
@@ -87,9 +88,11 @@ class _LecturerCourseStudentsScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Manual Attendance',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -134,9 +137,21 @@ class _LecturerCourseStudentsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.courseName} Students'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              MyApp.of(context).toggleTheme();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -228,3 +243,4 @@ class _LecturerCourseStudentsScreenState
     );
   }
 }
+  

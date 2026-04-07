@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_attendance_app/main.dart';
 
 import '../models/user.dart';
 import '../services/report_service.dart';
@@ -52,7 +53,10 @@ class _StudentHomeState extends State<StudentHome> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             children: [
-              Icon(icon),
+              Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 6),
               Text(
                 value,
@@ -71,10 +75,20 @@ class _StudentHomeState extends State<StudentHome> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              MyApp.of(context).toggleTheme();
+            },
+          ),
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
@@ -174,13 +188,12 @@ class _StudentHomeState extends State<StudentHome> {
             const SizedBox(height: 20),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'My Courses Overview',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 TextButton(

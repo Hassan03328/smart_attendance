@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_attendance_app/main.dart';
 import '../services/report_service.dart';
 import '../services/pdf_service.dart';
 
@@ -279,10 +280,20 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Report - ${widget.lectureName}'),
         actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              MyApp.of(context).toggleTheme();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit_note),
             onPressed: _openManualAttendanceDialog,
@@ -341,8 +352,8 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                   itemBuilder: (context, i) {
                     final item = list[i];
                     final status = (item['status'] ?? 'Unknown').toString();
-                    final p =
-                        ((item['attendance_percentage'] ?? 0) as num).toDouble();
+                    final p = ((item['attendance_percentage'] ?? 0) as num)
+                        .toDouble();
 
                     return Card(
                       child: ListTile(

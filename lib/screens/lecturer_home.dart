@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:smart_attendance_app/main.dart';
 
 import '../models/user.dart';
 import '../services/report_service.dart';
@@ -346,7 +347,10 @@ class _LecturerHomeState extends State<LecturerHome>
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             children: [
-              Icon(icon),
+              Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 6),
               Text(
                 value,
@@ -418,9 +422,11 @@ class _LecturerHomeState extends State<LecturerHome>
             },
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'My Courses',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot>(
@@ -500,9 +506,11 @@ class _LecturerHomeState extends State<LecturerHome>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
+        Text(
           'Create Course',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -526,9 +534,11 @@ class _LecturerHomeState extends State<LecturerHome>
           child: const Text('Create Course'),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'My Courses',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 12),
         StreamBuilder<QuerySnapshot>(
@@ -609,9 +619,11 @@ class _LecturerHomeState extends State<LecturerHome>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Create Lecture',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot>(
@@ -730,9 +742,11 @@ class _LecturerHomeState extends State<LecturerHome>
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'Active Lecture QR',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 12),
                     QrImageView(data: qrData!, size: 220),
@@ -765,9 +779,11 @@ class _LecturerHomeState extends State<LecturerHome>
               ),
             ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'My Lectures',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
           StreamBuilder<QuerySnapshot>(
@@ -886,6 +902,8 @@ class _LecturerHomeState extends State<LecturerHome>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lecturer Dashboard'),
@@ -898,6 +916,14 @@ class _LecturerHomeState extends State<LecturerHome>
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+            ),
+            onPressed: () {
+              MyApp.of(context).toggleTheme();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshDashboard,
