@@ -3,6 +3,7 @@ import 'package:smart_attendance_app/main.dart';
 import '../services/report_service.dart';
 import '../services/pdf_service.dart';
 
+// Lecture report screen for lecturer
 class LectureReportScreen extends StatefulWidget {
   final String lectureId;
   final String lectureName;
@@ -20,8 +21,13 @@ class LectureReportScreen extends StatefulWidget {
 }
 
 class _LectureReportScreenState extends State<LectureReportScreen> {
+  // Report data from Firestore
   late Future<List<Map<String, dynamic>>> data;
+
+  // Search text
   String search = '';
+
+  // Used to show loading when marking student manually
   String? savingStudentId;
 
   @override
@@ -30,6 +36,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     _reload();
   }
 
+  // Reload report data
   void _reload() {
     data = ReportService.getLectureAttendanceReport(
       lectureId: widget.lectureId,
@@ -37,6 +44,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     );
   }
 
+  // Return color based on attendance status
   Color _statusColor(String status) {
     switch (status) {
       case 'Present':
@@ -50,6 +58,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     }
   }
 
+  // Show how attendance was recorded
   String _formatSource(Map<String, dynamic> item) {
     if (item['marked_manually'] == true) return 'Manual by lecturer';
 
@@ -63,6 +72,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     return 'QR / Unknown';
   }
 
+  // Mark student attendance manually
   Future<void> _markManualStudent(
     Map<String, dynamic> student,
     String status,
@@ -111,6 +121,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     });
   }
 
+  // Open dialog to choose student and mark attendance manually
   Future<void> _openManualAttendanceDialog() async {
     final students = await ReportService.getCourseStudentsForManualAttendance(
       courseId: widget.courseId,
@@ -267,6 +278,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
     );
   }
 
+  // Delete attendance record
   Future<void> _deleteAttendanceItem(Map<String, dynamic> item) async {
     await ReportService.deleteAttendance(
       lectureId: widget.lectureId,
@@ -286,6 +298,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
       appBar: AppBar(
         title: Text('Report - ${widget.lectureName}'),
         actions: [
+          // Change theme button
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
@@ -294,10 +307,14 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
               MyApp.of(context).toggleTheme();
             },
           ),
+
+          // Manual attendance button
           IconButton(
             icon: const Icon(Icons.edit_note),
             onPressed: _openManualAttendanceDialog,
           ),
+
+          // Export PDF button
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
             onPressed: () async {
@@ -312,6 +329,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
       ),
       body: Column(
         children: [
+          // Search field
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -327,6 +345,8 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
               },
             ),
           ),
+
+          // Report list
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: data,
@@ -335,6 +355,7 @@ class _LectureReportScreenState extends State<LectureReportScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Filter by name or email
                 final list = snapshot.data!.where((item) {
                   final name =
                       (item['student_name'] ?? '').toString().toLowerCase();

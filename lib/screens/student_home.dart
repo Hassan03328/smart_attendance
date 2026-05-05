@@ -8,8 +8,9 @@ import 'student_course_details.dart';
 import 'student_courses.dart';
 import 'login_screen.dart';
 
+// Student dashboard screen
 class StudentHome extends StatefulWidget {
-  final AppUser user;
+  final AppUser user; // logged-in student data
 
   const StudentHome({super.key, required this.user});
 
@@ -18,7 +19,10 @@ class StudentHome extends StatefulWidget {
 }
 
 class _StudentHomeState extends State<StudentHome> {
+  // Student summary data
   late Future<Map<String, dynamic>> summaryFuture;
+
+  // Student courses data
   late Future<List<Map<String, dynamic>>> coursesFuture;
 
   @override
@@ -27,6 +31,7 @@ class _StudentHomeState extends State<StudentHome> {
     _refreshData();
   }
 
+  // Load student dashboard and courses
   void _refreshData() {
     summaryFuture =
         ReportService.getStudentDashboardSummary(studentId: widget.user.uid);
@@ -34,18 +39,21 @@ class _StudentHomeState extends State<StudentHome> {
         ReportService.getStudentCoursesDashboard(studentId: widget.user.uid);
   }
 
+  // Refresh page data
   Future<void> _refresh() async {
     setState(() {
       _refreshData();
     });
   }
 
+  // Return color based on attendance percentage
   Color _color(double value) {
     if (value >= 75) return Colors.green;
     if (value >= 50) return Colors.orange;
     return Colors.red;
   }
 
+  // Reusable dashboard card
   Widget _card(String title, String value, IconData icon) {
     return Expanded(
       child: Card(
@@ -81,6 +89,7 @@ class _StudentHomeState extends State<StudentHome> {
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
+          // Change app theme
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
@@ -89,10 +98,12 @@ class _StudentHomeState extends State<StudentHome> {
               MyApp.of(context).toggleTheme();
             },
           ),
+          // Refresh dashboard
           IconButton(
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
           ),
+          // Logout user
           IconButton(
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
@@ -116,11 +127,14 @@ class _StudentHomeState extends State<StudentHome> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Welcome message
             Text(
               'Welcome ${widget.user.fullName}',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
+
+            // Student dashboard summary
             FutureBuilder<Map<String, dynamic>>(
               future: summaryFuture,
               builder: (context, snapshot) {
@@ -176,6 +190,8 @@ class _StudentHomeState extends State<StudentHome> {
                       ],
                     ),
                     const SizedBox(height: 8),
+
+                    // Overall attendance progress
                     LinearProgressIndicator(
                       value: p / 100,
                       minHeight: 8,
@@ -186,6 +202,8 @@ class _StudentHomeState extends State<StudentHome> {
               },
             ),
             const SizedBox(height: 20),
+
+            // Courses section header
             Row(
               children: [
                 Expanded(
@@ -196,6 +214,7 @@ class _StudentHomeState extends State<StudentHome> {
                         ),
                   ),
                 ),
+                // Open manage courses page
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -210,6 +229,8 @@ class _StudentHomeState extends State<StudentHome> {
               ],
             ),
             const SizedBox(height: 8),
+
+            // Student courses overview
             FutureBuilder<List<Map<String, dynamic>>>(
               future: coursesFuture,
               builder: (context, snapshot) {
@@ -245,6 +266,7 @@ class _StudentHomeState extends State<StudentHome> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Course attendance counts
                             Text(
                               'Present: ${course['present_count']} | Late: ${course['late_count']} | Absent: ${course['absent_count']}',
                             ),
@@ -253,6 +275,8 @@ class _StudentHomeState extends State<StudentHome> {
                               'Attendance: ${p.toStringAsFixed(1)}% (${course['attended_lectures']}/${course['total_lectures']})',
                             ),
                             const SizedBox(height: 6),
+
+                            // Course attendance progress
                             LinearProgressIndicator(
                               value: p / 100,
                               minHeight: 6,
@@ -260,6 +284,7 @@ class _StudentHomeState extends State<StudentHome> {
                             ),
                           ],
                         ),
+                        // Open course details page
                         trailing: ElevatedButton(
                           onPressed: () {
                             Navigator.push(

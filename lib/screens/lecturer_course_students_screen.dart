@@ -3,6 +3,7 @@ import 'package:smart_attendance_app/main.dart';
 
 import '../services/report_service.dart';
 
+// This screen shows all students inside one course for the lecturer
 class LecturerCourseStudentsScreen extends StatefulWidget {
   final String courseId;
   final String courseName;
@@ -20,17 +21,25 @@ class LecturerCourseStudentsScreen extends StatefulWidget {
 
 class _LecturerCourseStudentsScreenState
     extends State<LecturerCourseStudentsScreen> {
+  // Students data from ReportService
   late Future<List<Map<String, dynamic>>> studentsFuture;
+
+  // Search text
   String search = '';
+
+  // Used to show loading on selected student button
   String? savingStudentId;
 
   @override
   void initState() {
     super.initState();
+
+    // Load students summary when screen opens
     studentsFuture =
         ReportService.getCourseStudentsSummary(courseId: widget.courseId);
   }
 
+  // Reload students data after manual attendance
   void _reload() {
     setState(() {
       studentsFuture =
@@ -38,12 +47,14 @@ class _LecturerCourseStudentsScreenState
     });
   }
 
+  // Return color based on attendance percentage
   Color _color(double value) {
     if (value >= 75) return Colors.green;
     if (value >= 50) return Colors.orange;
     return Colors.red;
   }
 
+  // Mark student attendance manually
   Future<void> _markAttendance(
     Map<String, dynamic> student,
     String status,
@@ -80,6 +91,7 @@ class _LecturerCourseStudentsScreenState
     });
   }
 
+  // Manual attendance buttons
   Widget _manualButtons(Map<String, dynamic> student) {
     final studentId = (student['student_id'] ?? '').toString();
     final loading = savingStudentId == studentId;
@@ -143,6 +155,7 @@ class _LecturerCourseStudentsScreenState
       appBar: AppBar(
         title: Text('${widget.courseName} Students'),
         actions: [
+          // Change theme button
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
@@ -155,6 +168,7 @@ class _LecturerCourseStudentsScreenState
       ),
       body: Column(
         children: [
+          // Search field
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -170,6 +184,8 @@ class _LecturerCourseStudentsScreenState
               },
             ),
           ),
+
+          // Students list
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: studentsFuture,
@@ -178,6 +194,7 @@ class _LecturerCourseStudentsScreenState
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                // Filter students by name or email
                 final students = snapshot.data!.where((student) {
                   final name =
                       (student['student_name'] ?? '').toString().toLowerCase();
@@ -203,6 +220,7 @@ class _LecturerCourseStudentsScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Student name
                             Text(
                               (student['student_name'] ?? '').toString(),
                               style: const TextStyle(
@@ -211,23 +229,33 @@ class _LecturerCourseStudentsScreenState
                               ),
                             ),
                             const SizedBox(height: 4),
+
+                            // Student email
                             Text(
                               (student['student_email'] ?? '').toString(),
                             ),
                             const SizedBox(height: 4),
+
+                            // Student attendance counts
                             Text(
                               'Present: ${student['present_count']} | Late: ${student['late_count']} | Absent: ${student['absent_count']}',
                             ),
                             const SizedBox(height: 4),
+
+                            // Student attendance percentage
                             Text(
                               'Attendance: ${p.toStringAsFixed(1)}% (${student['attended_count']}/${student['total_lectures']})',
                             ),
                             const SizedBox(height: 6),
+
+                            // Progress bar
                             LinearProgressIndicator(
                               value: p / 100,
                               minHeight: 6,
                               color: _color(p),
                             ),
+
+                            // Manual attendance buttons
                             _manualButtons(student),
                           ],
                         ),
@@ -243,4 +271,3 @@ class _LecturerCourseStudentsScreenState
     );
   }
 }
-  

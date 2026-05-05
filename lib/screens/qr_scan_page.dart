@@ -5,10 +5,11 @@ import '../models/user.dart';
 import '../services/location_service.dart';
 import '../services/wifi_service.dart';
 
+// QR Scan screen for student attendance
 class QRScanPage extends StatefulWidget {
-  final AppUser user;
-  final String courseId;
-  final String courseName;
+  final AppUser user; // current logged-in student
+  final String courseId; // current course id
+  final String courseName; // current course name
 
   const QRScanPage({
     super.key,
@@ -22,17 +23,20 @@ class QRScanPage extends StatefulWidget {
 }
 
 class _QRScanPageState extends State<QRScanPage> {
-  bool processing = false;
+  bool processing = false; // prevent multiple scans
 
+  // Show message to user
   void showMsg(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  // Main scan logic
   Future<void> scan(String code) async {
-    if (processing) return;
+    if (processing) return; // stop if already scanning
     processing = true;
 
     try {
+      // Check location and WiFi for anti-cheat
       final insideUniversity = await LocationService.isInsideUniversity();
       final onUniversityWifi = await WifiService.isOnUniversityWifi();
 
@@ -44,6 +48,7 @@ class _QRScanPageState extends State<QRScanPage> {
         return;
       }
 
+      // Get lecture by QR code
       final query = await FirebaseFirestore.instance
           .collection('lectures')
           .where('qr_code', isEqualTo: code)
@@ -59,18 +64,21 @@ class _QRScanPageState extends State<QRScanPage> {
       final doc = query.docs.first;
       final lecture = doc.data();
 
+      // Check if QR belongs to this course
       if (lecture['course_id'] != widget.courseId) {
         showMsg('This QR does not belong to this course');
         processing = false;
         return;
       }
 
+      // Check if lecture is active
       if (lecture['is_active'] != true) {
         showMsg('This QR is closed');
         processing = false;
         return;
       }
 
+      // Check time validity
       final now = DateTime.now();
       final start = lecture['start_time'].toDate();
       final end = lecture['end_time'].toDate();
@@ -87,6 +95,7 @@ class _QRScanPageState extends State<QRScanPage> {
         return;
       }
 
+      // Check if student already scanned
       final exist = await FirebaseFirestore.instance
           .collection('attendance')
           .where('student_id', isEqualTo: widget.user.uid)
@@ -99,10 +108,14 @@ class _QRScanPageState extends State<QRScanPage> {
         return;
       }
 
+      // Get WiFi name
       final currentWifi = await WifiService.getCurrentWifiName();
+
+      // Late rule: after 5 minutes
       final lateThreshold = start.add(const Duration(minutes: 5));
       final status = now.isAfter(lateThreshold) ? 'Late' : 'Present';
 
+      // Save attendance in Firestore
       await FirebaseFirestore.instance.collection('attendance').add({
         'student_id': widget.user.uid,
         'student_name': widget.user.fullName,
@@ -121,10 +134,13 @@ class _QRScanPageState extends State<QRScanPage> {
         'status': status,
       });
 
+      // Success message
       showMsg('Attendance recorded as $status');
 
+      // Close page after success
       if (mounted) Navigator.pop(context);
     } catch (e) {
+      // Handle errors
       showMsg('Error: $e');
     }
 
@@ -139,17 +155,19 @@ class _QRScanPageState extends State<QRScanPage> {
       ),
       body: Stack(
         children: [
+          // Camera scanner
           MobileScanner(
             onDetect: (capture) {
               for (final barcode in capture.barcodes) {
                 final code = barcode.rawValue;
                 if (code != null) {
-                  scan(code);
+                  scan(code); // call scan function
                   break;
                 }
               }
             },
           ),
+          // Top info message (anti-cheat info)
           Align(
             alignment: Alignment.topCenter,
             child: Container(

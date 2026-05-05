@@ -3,11 +3,12 @@ import '../models/user.dart';
 import 'qr_scan_page.dart';
 import 'student_attendance_report_screen.dart';
 
+// This screen shows course actions for the student
 class StudentCourseDetailsScreen extends StatelessWidget {
-  final AppUser user;
-  final String courseId;
-  final String courseName;
-  final String section;
+  final AppUser user; // logged-in student
+  final String courseId; // current course id
+  final String courseName; // course name
+  final String section; // course section
 
   const StudentCourseDetailsScreen({
     super.key,
@@ -19,6 +20,7 @@ class StudentCourseDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Create title with section if exists
     final title =
         section.isEmpty ? courseName : '$courseName - Section $section';
 
@@ -28,6 +30,7 @@ class StudentCourseDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // Button to scan QR code (attendance)
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -44,6 +47,8 @@ class StudentCourseDetailsScreen extends StatelessWidget {
               child: const Text('Scan QR Code'),
             ),
             const SizedBox(height: 16),
+
+            // Button to open attendance report
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

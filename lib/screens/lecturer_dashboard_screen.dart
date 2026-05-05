@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart';
 
+// Lecturer dashboard statistics screen
 class LecturerDashboardScreen extends StatelessWidget {
-  final AppUser user;
+  final AppUser user; // current logged-in lecturer
 
   const LecturerDashboardScreen({super.key, required this.user});
 
+  // Get lecturer statistics from Firestore
   Future<Map<String, int>> _getStats() async {
+    // Get lecturer courses
     final courses = await FirebaseFirestore.instance
         .collection('courses')
         .where('lecturer_id', isEqualTo: user.uid)
         .get();
 
+    // Get lecturer lectures
     final lectures = await FirebaseFirestore.instance
         .collection('lectures')
         .where('lecturer_id', isEqualTo: user.uid)
@@ -20,6 +24,7 @@ class LecturerDashboardScreen extends StatelessWidget {
 
     int totalAttendance = 0;
 
+    // Count attendance records for each lecture
     for (final lecture in lectures.docs) {
       final attendance = await FirebaseFirestore.instance
           .collection('attendance')
@@ -38,6 +43,7 @@ class LecturerDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Latest lectures stream
     final latestLecturesStream = FirebaseFirestore.instance
         .collection('lectures')
         .where('lecturer_id', isEqualTo: user.uid)
@@ -52,6 +58,7 @@ class LecturerDashboardScreen extends StatelessWidget {
       body: FutureBuilder<Map<String, int>>(
         future: _getStats(),
         builder: (context, snapshot) {
+          // Loading statistics
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -99,19 +106,24 @@ class LecturerDashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                // Listen to latest lectures in real time
                 StreamBuilder<QuerySnapshot>(
                   stream: latestLecturesStream,
                   builder: (context, snapshot) {
+                    // Loading lectures
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
                     final docs = snapshot.data!.docs;
 
+                    // No lectures
                     if (docs.isEmpty) {
                       return const Text('No lectures yet');
                     }
 
+                    // Latest lectures list
                     return Column(
                       children: docs.map((doc) {
                         final data = doc.data() as Map<String, dynamic>;
@@ -135,6 +147,7 @@ class LecturerDashboardScreen extends StatelessWidget {
   }
 }
 
+// Reusable statistics card
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;

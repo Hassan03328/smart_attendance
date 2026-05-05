@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/report_service.dart';
 import '../models/user.dart';
 
+// Student attendance report screen for one course
 class StudentAttendanceReportScreen extends StatefulWidget {
   final AppUser user;
   final String courseId;
@@ -21,23 +22,30 @@ class StudentAttendanceReportScreen extends StatefulWidget {
 
 class _StudentAttendanceReportScreenState
     extends State<StudentAttendanceReportScreen> {
+  // Attendance records list
   late Future<List<Map<String, dynamic>>> data;
+
+  // Attendance summary data
   late Future<Map<String, dynamic>> summary;
 
   @override
   void initState() {
     super.initState();
+
+    // Load student attendance records for this course
     data = ReportService.getStudentAttendance(
       studentId: widget.user.uid,
       courseId: widget.courseId,
     );
 
+    // Load attendance summary for this course
     summary = ReportService.getStudentAttendanceSummary(
       studentId: widget.user.uid,
       courseId: widget.courseId,
     );
   }
 
+  // Return color based on attendance status
   Color _statusColor(String status) {
     switch (status) {
       case 'Present':
@@ -58,6 +66,7 @@ class _StudentAttendanceReportScreenState
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Summary section
             FutureBuilder<Map<String, dynamic>>(
               future: summary,
               builder: (context, snapshot) {
@@ -85,6 +94,8 @@ class _StudentAttendanceReportScreenState
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 16),
+
+                          // Attendance percentage
                           Text(
                             '${percentage.toStringAsFixed(1)}%',
                             style: const TextStyle(
@@ -93,6 +104,8 @@ class _StudentAttendanceReportScreenState
                             ),
                           ),
                           const SizedBox(height: 8),
+
+                          // Progress bar color depends on percentage
                           LinearProgressIndicator(
                             value: percentage / 100,
                             minHeight: 8,
@@ -104,6 +117,8 @@ class _StudentAttendanceReportScreenState
                                     : Colors.red,
                           ),
                           const SizedBox(height: 16),
+
+                          // Summary numbers
                           Text(
                             'Attended: ${info['attended_lectures']} / ${info['total_lectures']}',
                           ),
@@ -118,6 +133,8 @@ class _StudentAttendanceReportScreenState
                 );
               },
             ),
+
+            // Attendance records list
             FutureBuilder<List<Map<String, dynamic>>>(
               future: data,
               builder: (context, snapshot) {
@@ -145,6 +162,7 @@ class _StudentAttendanceReportScreenState
                         vertical: 6,
                       ),
                       child: ListTile(
+                        // Status circle
                         leading: CircleAvatar(
                           backgroundColor: _statusColor(status),
                           child: Text(
@@ -152,12 +170,18 @@ class _StudentAttendanceReportScreenState
                             style: const TextStyle(color: Colors.white),
                           ),
                         ),
+
+                        // Lecture name
                         title: Text(item['lecture_name'] ?? ''),
+
+                        // Attendance time
                         subtitle: Text(
                           item['timestamp'] != null
                               ? item['timestamp'].toDate().toString()
                               : '',
                         ),
+
+                        // Attendance status
                         trailing: Text(
                           status,
                           style: TextStyle(
