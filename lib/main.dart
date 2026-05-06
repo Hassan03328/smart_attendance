@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-<<<<<<< HEAD
-=======
-
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 import 'package:smart_attendance_app/screens/role_router.dart';
 
 void main() async {
@@ -12,7 +8,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-<<<<<<< HEAD
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -207,16 +202,6 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: isDark ? darkTheme : lightTheme,
       home: const RoleRouter(),
-=======
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: RoleRouter(),
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     );
   }
 }

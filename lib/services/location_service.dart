@@ -1,6 +1,5 @@
 import 'package:geolocator/geolocator.dart';
 
-<<<<<<< HEAD
 // Service to check if user is inside university using GPS
 class LocationService {
   // University location (latitude & longitude)
@@ -11,18 +10,10 @@ class LocationService {
   static const double allowedRadius = 1000; // بالمتر
 
   // Check if user is inside university area
-=======
-class LocationService {
-  static const double universityLat = 21.592414333476388;
-  static const double universityLng = 39.14577137778277;
-  static const double allowedRadius = 200; // بالمتر
-
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   static Future<bool> isInsideUniversity() async {
     bool serviceEnabled;
     LocationPermission permission;
 
-<<<<<<< HEAD
     // Check if location service is ON
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return false;
@@ -39,17 +30,6 @@ class LocationService {
     }
 
     // If permanently denied → cannot use location
-=======
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return false;
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return false;
-    }
-
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     if (permission == LocationPermission.deniedForever) {
       return false;
     }

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-<<<<<<< HEAD
 // Service class responsible for generating reports and summaries
 class ReportService {
   // Firestore instance used across all methods
@@ -293,25 +292,6 @@ class ReportService {
   // ======================================
   // 🧾 Student Attendance Records
   // ======================================
-=======
-class ReportService {
-  static final _db = FirebaseFirestore.instance;
-
-  // دكتور - كل حضور محاضرة
-  static Future<List<Map<String, dynamic>>> getLectureAttendance(
-    String lectureId,
-  ) async {
-    final snapshot = await _db
-        .collection('attendance')
-        .where('lecture_id', isEqualTo: lectureId)
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    return snapshot.docs.map((doc) => doc.data()).toList();
-  }
-
-  // طالب - حضوره في مادة
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   static Future<List<Map<String, dynamic>>> getStudentAttendance({
     required String studentId,
     required String courseId,

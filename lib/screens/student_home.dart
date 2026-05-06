@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-<<<<<<< HEAD
 import 'package:smart_attendance_app/main.dart';
 
 import '../models/user.dart';
@@ -12,18 +11,10 @@ import 'login_screen.dart';
 // Student dashboard screen
 class StudentHome extends StatefulWidget {
   final AppUser user; // logged-in student data
-=======
-import '../screens/student_courses.dart';
-import '../models/user.dart';
-
-class StudentHome extends StatelessWidget {
-  final AppUser user;
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 
   const StudentHome({super.key, required this.user});
 
   @override
-<<<<<<< HEAD
   State<StudentHome> createState() => _StudentHomeState();
 }
 
@@ -94,14 +85,10 @@ class _StudentHomeState extends State<StudentHome> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-=======
-  Widget build(BuildContext context) {
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
-<<<<<<< HEAD
           // Change app theme
           IconButton(
             icon: Icon(
@@ -211,43 +198,10 @@ class _StudentHomeState extends State<StudentHome> {
                       color: _color(p),
                     ),
                   ],
-=======
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome ${user.fullName}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.menu_book),
-              label: const Text('My Courses'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => StudentCoursesScreen(user: user),
-                  ),
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
                 );
               },
             ),
             const SizedBox(height: 20),
-<<<<<<< HEAD
 
             // Courses section header
             Row(
@@ -353,19 +307,10 @@ class _StudentHomeState extends State<StudentHome> {
                   }).toList(),
                 );
               },
-=======
-            const Text(
-              '• Enroll in your courses first\n• Open the course\n• Then scan the QR code for attendance',
-              style: TextStyle(color: Colors.grey),
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
             ),
           ],
         ),
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2

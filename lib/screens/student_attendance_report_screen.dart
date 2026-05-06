@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/report_service.dart';
 import '../models/user.dart';
 
-<<<<<<< HEAD
 // Student attendance report screen for one course
-=======
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 class StudentAttendanceReportScreen extends StatefulWidget {
   final AppUser user;
   final String courseId;
@@ -25,7 +22,6 @@ class StudentAttendanceReportScreen extends StatefulWidget {
 
 class _StudentAttendanceReportScreenState
     extends State<StudentAttendanceReportScreen> {
-<<<<<<< HEAD
   // Attendance records list
   late Future<List<Map<String, dynamic>>> data;
 
@@ -37,18 +33,10 @@ class _StudentAttendanceReportScreenState
     super.initState();
 
     // Load student attendance records for this course
-=======
-  late Future<List<Map<String, dynamic>>> data;
-
-  @override
-  void initState() {
-    super.initState();
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     data = ReportService.getStudentAttendance(
       studentId: widget.user.uid,
       courseId: widget.courseId,
     );
-<<<<<<< HEAD
 
     // Load attendance summary for this course
     summary = ReportService.getStudentAttendanceSummary(
@@ -67,15 +55,12 @@ class _StudentAttendanceReportScreenState
       default:
         return Colors.grey;
     }
-=======
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-<<<<<<< HEAD
         title: Text('${widget.courseName} Report'),
       ),
       body: SingleChildScrollView(
@@ -216,41 +201,3 @@ class _StudentAttendanceReportScreenState
     );
   }
 }
-=======
-        title: Text(widget.courseName),
-      ),
-      body: FutureBuilder(
-        future: data,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final list = snapshot.data!;
-
-          if (list.isEmpty) {
-            return const Center(child: Text('No attendance yet'));
-          }
-
-          return ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (context, i) {
-              final item = list[i];
-
-              return ListTile(
-                leading: const Icon(Icons.check_circle, color: Colors.green),
-                title: Text(item['lecture_name'] ?? ''),
-                subtitle: Text(
-                  item['timestamp'] != null
-                      ? item['timestamp'].toDate().toString()
-                      : '',
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
