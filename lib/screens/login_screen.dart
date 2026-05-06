@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+<<<<<<< HEAD
 import 'package:smart_attendance_app/main.dart';
 
 import '../models/user.dart';
@@ -9,6 +10,10 @@ import 'lecturer_home.dart';
 import 'student_home.dart';
 
 // Login & Register screen
+=======
+import '../utils/validators.dart';
+
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -17,11 +22,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+<<<<<<< HEAD
   // Controllers for input fields
+=======
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _name = TextEditingController();
 
+<<<<<<< HEAD
   // UI state
   bool isLogin = true; // true = login , false = register
   bool loading = false; // show loading spinner
@@ -50,6 +59,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Main function for login/register
+=======
+  bool isLogin = true;
+  bool loading = false;
+  String? error;
+  String selectedRole = 'student';
+
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   Future<void> submit() async {
     setState(() {
       loading = true;
@@ -59,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final email = _email.text.trim();
       final password = _password.text.trim();
+<<<<<<< HEAD
       final fullName = _name.text.trim();
 
       // Check empty fields
@@ -67,17 +84,26 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // Check strong password
+=======
+
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
       if (!Validators.isValidPassword(password)) {
         throw 'Password must contain uppercase, lowercase, number and symbol';
       }
 
+<<<<<<< HEAD
       // Detect role from email
+=======
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
       final detectedRole = Validators.getRoleFromEmail(email);
       if (detectedRole == null) {
         throw 'Invalid email domain';
       }
 
+<<<<<<< HEAD
       // Check selected role matches email
+=======
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
       if (detectedRole != selectedRole) {
         throw selectedRole == 'lecturer'
             ? 'You selected Lecturer, please enter a lecturer email'
@@ -85,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (isLogin) {
+<<<<<<< HEAD
         // ===== LOGIN =====
         final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
@@ -119,11 +146,20 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         // Save user data in Firestore
+=======
+        await FirebaseAuth.instance
+            .signInWithEmailAndPassword(email: email, password: password);
+      } else {
+        final cred = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
         await FirebaseFirestore.instance
             .collection('users')
             .doc(cred.user!.uid)
             .set({
           'email': email,
+<<<<<<< HEAD
           'full_name': fullName,
           'role': selectedRole,
           'created_at': Timestamp.now(),
@@ -203,13 +239,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Role selection card (Student / Lecturer)
+=======
+          'full_name': _name.text.trim(),
+          'role': selectedRole,
+          'created_at': Timestamp.now(),
+        });
+      }
+    } catch (e) {
+      setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+    }
+
+    setState(() => loading = false);
+  }
+
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
   Widget _buildRoleCard({
     required String value,
     required String title,
     required IconData icon,
   }) {
     final isSelected = selectedRole == value;
+<<<<<<< HEAD
     final isDark = Theme.of(context).brightness == Brightness.dark;
+=======
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 
     return Expanded(
       child: GestureDetector(
@@ -222,6 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
+<<<<<<< HEAD
             color: isSelected
                 ? Theme.of(context).colorScheme.primary
                 : (isDark ? const Color(0xFF1E293B) : Colors.grey.shade100),
@@ -232,17 +286,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   : (isDark ? const Color(0xFF334155) : Colors.grey.shade400),
               width: 1.5,
             ),
+=======
+            color: isSelected ? Colors.blue : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected ? Colors.blue : Colors.grey.shade400,
+              width: 1.5,
+            ),
+            boxShadow: [
+              if (isSelected)
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.18),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
           ),
           child: Column(
             children: [
               Icon(
                 icon,
                 size: 28,
+<<<<<<< HEAD
+=======
+                color: isSelected ? Colors.white : Colors.black87,
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
               ),
               const SizedBox(height: 8),
               Text(
                 title,
+<<<<<<< HEAD
                 style: const TextStyle(fontWeight: FontWeight.bold),
+=======
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
               ),
             ],
           ),
@@ -251,6 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+<<<<<<< HEAD
   // Input style
   InputDecoration _inputDecoration(String label) {
     return InputDecoration(
@@ -258,10 +340,26 @@ class _LoginScreenState extends State<LoginScreen> {
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
+=======
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     );
   }
 
   @override
+<<<<<<< HEAD
   void dispose() {
     _email.dispose();
     _password.dispose();
@@ -348,9 +446,125 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Text(isLogin ? 'Create new account' : 'Already have an account? Login'),
               ),
             ],
+=======
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xfff7f7fb),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Card(
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isLogin ? Icons.login : Icons.person_add_alt_1,
+                    size: 42,
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isLogin ? 'Login' : 'Register',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _buildRoleCard(
+                        value: 'student',
+                        title: 'Student',
+                        icon: Icons.school,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildRoleCard(
+                        value: 'lecturer',
+                        title: 'Lecturer',
+                        icon: Icons.person,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (!isLogin) ...[
+                    TextField(
+                      controller: _name,
+                      decoration: _inputDecoration('Full Name'),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  TextField(
+                    controller: _email,
+                    decoration: _inputDecoration('Email'),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _password,
+                    obscureText: true,
+                    decoration: _inputDecoration('Password'),
+                  ),
+                  const SizedBox(height: 18),
+                  if (error != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        error!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: submit,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: Text(isLogin ? 'Login' : 'Register'),
+                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        isLogin = !isLogin;
+                        error = null;
+                      });
+                    },
+                    child: Text(
+                      isLogin
+                          ? 'Create new account'
+                          : 'Already have an account? Login',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
           ),
         ),
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2

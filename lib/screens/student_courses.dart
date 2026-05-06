@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/user.dart';
 import '../services/enrollment_service.dart';
+<<<<<<< HEAD
 import 'student_course_details.dart';
 
 // This screen shows all courses and allows student to enroll or open them
@@ -23,11 +24,25 @@ class StudentCoursesScreen extends StatelessWidget {
         .where('student_id', isEqualTo: user.uid)
         .snapshots();
 
+=======
+
+class StudentCoursesScreen extends StatelessWidget {
+  final AppUser user;
+
+  const StudentCoursesScreen({
+    super.key,
+    required this.user,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Courses'),
       ),
       body: StreamBuilder<QuerySnapshot>(
+<<<<<<< HEAD
         stream: coursesStream,
         builder: (context, courseSnapshot) {
 
@@ -163,9 +178,84 @@ class StudentCoursesScreen extends StatelessWidget {
                 }).toList(),
               );
             },
+=======
+        stream: FirebaseFirestore.instance.collection('courses').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text('No courses available'),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: snapshot.data!.docs.map((doc) {
+              final courseId = doc.id;
+              final courseName = doc['name'];
+
+              return Card(
+                elevation: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  title: Text(
+                    courseName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text('Course ID: $courseId'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Enroll
+                      IconButton(
+                        icon: const Icon(Icons.add_circle, color: Colors.green),
+                        onPressed: () async {
+                          await EnrollmentService.enrollStudent(
+                            studentId: user.uid,
+                            courseId: courseId,
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Enrolled successfully'),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Drop
+                      IconButton(
+                        icon:
+                            const Icon(Icons.remove_circle, color: Colors.red),
+                        onPressed: () async {
+                          await EnrollmentService.dropStudent(
+                            studentId: user.uid,
+                            courseId: courseId,
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Dropped successfully'),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
           );
         },
       ),
     );
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
