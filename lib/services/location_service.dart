@@ -34,18 +34,12 @@ class LocationService {
       return false;
     }
 
-<<<<<<< HEAD
     // Get current user location
-=======
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     final position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
-<<<<<<< HEAD
     // Calculate distance between user and university
-=======
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
     final distance = Geolocator.distanceBetween(
       position.latitude,
       position.longitude,
@@ -53,13 +47,7 @@ class LocationService {
       universityLng,
     );
 
-<<<<<<< HEAD
     // Return true if inside allowed radius
     return distance <= allowedRadius;
   }
 }
-=======
-    return distance <= allowedRadius;
-  }
-}
->>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
