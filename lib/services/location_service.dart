@@ -3,11 +3,11 @@ import 'package:geolocator/geolocator.dart';
 // Service to check if user is inside university using GPS
 class LocationService {
   // University location (latitude & longitude)
-  static const double universityLat = 21.592414333476388;
-  static const double universityLng = 39.14577137778277;
+  static const double universityLat = 21.5921992;
+  static const double universityLng = 39.1453120;
 
   // Allowed radius in meters (student must be inside this range)
-  static const double allowedRadius = 200; // بالمتر
+  static const double allowedRadius = 1000; // بالمتر
 
   // Check if user is inside university area
   static Future<bool> isInsideUniversity() async {

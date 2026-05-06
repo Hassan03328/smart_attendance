@@ -1,6 +1,7 @@
 # Miscellaneous
 *.class
 <<<<<<< HEAD
+<<<<<<< HEAD
 *.lock
 *.log
 *.pyc
@@ -120,6 +121,8 @@ app.*.symbols
 !/dev/ci/**/Gemfile.lock
 android/app/google-services.json
 =======
+=======
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
 *.log
 *.pyc
 *.swp
@@ -163,4 +166,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+<<<<<<< HEAD
+>>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
+=======
 >>>>>>> 6189e135f3de2c07d9cd20d1b0be1fa3c949a3f2
