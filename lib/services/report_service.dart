@@ -1,21 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Service class responsible for generating reports and summaries
 class ReportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // ================= STUDENT DASHBOARD =================
   static Future<Map<String, dynamic>> getStudentDashboardSummary({
     required String studentId,
   }) async {
+    // Fetch student enrollments
     final enrollmentsSnapshot = await _db
         .collection('enrollments')
         .where('student_id', isEqualTo: studentId)
         .get();
 
+    // Fetch student attendance
     final attendanceSnapshot = await _db
         .collection('attendance')
         .where('student_id', isEqualTo: studentId)
         .get();
 
+    // Extract unique course IDs
     final enrolledCourseIds = enrollmentsSnapshot.docs
         .map((e) => (e.data()['course_id'] ?? '').toString())
         .where((e) => e.isNotEmpty)
@@ -24,6 +29,7 @@ class ReportService {
 
     int totalLectures = 0;
 
+    // Count lectures across all courses
     for (final courseId in enrolledCourseIds) {
       final lecturesSnapshot = await _db
           .collection('lectures')
@@ -36,6 +42,7 @@ class ReportService {
     int presentCount = 0;
     int lateCount = 0;
 
+    // Count attendance status
     for (final doc in attendanceSnapshot.docs) {
       final status = (doc.data()['status'] ?? '').toString();
       if (status == 'Present') presentCount++;
@@ -44,6 +51,8 @@ class ReportService {
 
     final attendedCount = attendanceSnapshot.docs.length;
     final absentCount = totalLectures - attendedCount;
+
+    // Calculate percentage
     final percentage =
         totalLectures == 0 ? 0.0 : (attendedCount / totalLectures) * 100;
 
@@ -57,16 +66,19 @@ class ReportService {
     };
   }
 
+  // ================= STUDENT COURSE SUMMARY =================
   static Future<Map<String, dynamic>> getStudentAttendanceSummary({
     required String studentId,
     required String courseId,
   }) async {
+    // Fetch attendance per course
     final attendanceSnapshot = await _db
         .collection('attendance')
         .where('student_id', isEqualTo: studentId)
         .where('course_id', isEqualTo: courseId)
         .get();
 
+    // Fetch lectures
     final lecturesSnapshot = await _db
         .collection('lectures')
         .where('course_id', isEqualTo: courseId)
@@ -98,6 +110,7 @@ class ReportService {
     };
   }
 
+  // ================= STUDENT COURSES DASHBOARD =================
   static Future<List<Map<String, dynamic>>> getStudentCoursesDashboard({
     required String studentId,
   }) async {
@@ -112,9 +125,11 @@ class ReportService {
       final courseId = (enrollment.data()['course_id'] ?? '').toString();
       if (courseId.isEmpty) continue;
 
+      // Get course info
       final courseDoc = await _db.collection('courses').doc(courseId).get();
       final courseData = courseDoc.data() ?? {};
 
+      // Get attendance summary
       final summary = await getStudentAttendanceSummary(
         studentId: studentId,
         courseId: courseId,
@@ -131,6 +146,7 @@ class ReportService {
     return results;
   }
 
+  // ================= LECTURER DASHBOARD =================
   static Future<Map<String, dynamic>> getLecturerDashboardSummary({
     required String lecturerId,
   }) async {
@@ -146,6 +162,7 @@ class ReportService {
 
     int attendanceCount = 0;
 
+    // Count attendance across lectures
     for (final lecture in lecturesSnapshot.docs) {
       final attendanceSnapshot = await _db
           .collection('attendance')
@@ -161,16 +178,24 @@ class ReportService {
       'attendance_count': attendanceCount,
     };
   }
+}
 
+
+   // ================= COURSE STUDENTS SUMMARY =================
   static Future<List<Map<String, dynamic>>> getCourseStudentsSummary({
     required String courseId,
   }) async {
+
+    // Fetch all enrollments for the course
     final enrollmentsSnapshot = await _db
         .collection('enrollments')
         .where('course_id', isEqualTo: courseId)
         .get();
 
+    // Fetch all users
     final usersSnapshot = await _db.collection('users').get();
+
+    // Fetch all lectures of the course
     final lecturesSnapshot = await _db
         .collection('lectures')
         .where('course_id', isEqualTo: courseId)
@@ -178,6 +203,7 @@ class ReportService {
 
     final totalLectures = lecturesSnapshot.docs.length;
 
+    // Map users by ID for quick lookup
     final usersById = <String, Map<String, dynamic>>{};
     for (final doc in usersSnapshot.docs) {
       usersById[doc.id] = doc.data();
@@ -185,10 +211,12 @@ class ReportService {
 
     final result = <Map<String, dynamic>>[];
 
+    // Loop through each enrolled student
     for (final enrollment in enrollmentsSnapshot.docs) {
       final studentId = (enrollment.data()['student_id'] ?? '').toString();
       if (studentId.isEmpty) continue;
 
+      // Fetch attendance for this student in this course
       final attendanceSnapshot = await _db
           .collection('attendance')
           .where('student_id', isEqualTo: studentId)
@@ -198,6 +226,7 @@ class ReportService {
       int presentCount = 0;
       int lateCount = 0;
 
+      // Count attendance statuses
       for (final doc in attendanceSnapshot.docs) {
         final status = (doc.data()['status'] ?? '').toString();
         if (status == 'Present') presentCount++;
@@ -206,11 +235,15 @@ class ReportService {
 
       final attendedCount = attendanceSnapshot.docs.length;
       final absentCount = totalLectures - attendedCount;
+
+      // Calculate percentage
       final percentage =
           totalLectures == 0 ? 0.0 : (attendedCount / totalLectures) * 100;
 
+      // Get user data
       final user = usersById[studentId] ?? {};
 
+      // Add student summary
       result.add({
         'student_id': studentId,
         'student_name':
@@ -225,16 +258,20 @@ class ReportService {
       });
     }
 
+    // Sort students by attendance percentage (descending)
     result.sort((a, b) => (b['attendance_percentage'] as double)
         .compareTo(a['attendance_percentage'] as double));
 
     return result;
   }
 
+  // ================= STUDENT ATTENDANCE LIST =================
   static Future<List<Map<String, dynamic>>> getStudentAttendance({
     required String studentId,
     required String courseId,
   }) async {
+
+    // Fetch attendance records sorted by latest
     final snapshot = await _db
         .collection('attendance')
         .where('student_id', isEqualTo: studentId)
@@ -242,29 +279,37 @@ class ReportService {
         .orderBy('timestamp', descending: true)
         .get();
 
+    // Convert documents to list of maps
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
+  // ================= LECTURE ATTENDANCE REPORT =================
   static Future<List<Map<String, dynamic>>> getLectureAttendanceReport({
     required String lectureId,
     required String courseId,
   }) async {
+
+    // Fetch attendance for this lecture
     final attendanceSnapshot = await _db
         .collection('attendance')
         .where('lecture_id', isEqualTo: lectureId)
         .get();
 
+    // Fetch enrolled students
     final enrollmentsSnapshot = await _db
         .collection('enrollments')
         .where('course_id', isEqualTo: courseId)
         .get();
 
+    // Fetch users
     final usersSnapshot = await _db.collection('users').get();
 
+    // Fetch course info
     final courseDoc = await _db.collection('courses').doc(courseId).get();
     final courseData = courseDoc.data() ?? {};
     final courseSection = (courseData['section'] ?? '').toString();
 
+    // Fetch all lectures of the course
     final lecturesSnapshot = await _db
         .collection('lectures')
         .where('course_id', isEqualTo: courseId)
@@ -272,6 +317,7 @@ class ReportService {
 
     final totalLectures = lecturesSnapshot.docs.length;
 
+    // Map attendance by student ID
     final attendanceByStudent = <String, Map<String, dynamic>>{};
     for (final doc in attendanceSnapshot.docs) {
       final data = doc.data();
@@ -281,6 +327,7 @@ class ReportService {
       }
     }
 
+    // Map users
     final usersById = <String, Map<String, dynamic>>{};
     for (final doc in usersSnapshot.docs) {
       usersById[doc.id] = doc.data();
@@ -288,10 +335,12 @@ class ReportService {
 
     final result = <Map<String, dynamic>>[];
 
+    // Loop students
     for (final enrollment in enrollmentsSnapshot.docs) {
       final studentId = (enrollment.data()['student_id'] ?? '').toString();
       if (studentId.isEmpty) continue;
 
+      // Fetch total attendance for percentage
       final studentAttendanceInCourse = await _db
           .collection('attendance')
           .where('student_id', isEqualTo: studentId)
@@ -299,11 +348,15 @@ class ReportService {
           .get();
 
       final attendedCount = studentAttendanceInCourse.docs.length;
+
       final percentage =
           totalLectures == 0 ? 0.0 : (attendedCount / totalLectures) * 100;
 
       if (attendanceByStudent.containsKey(studentId)) {
+
+        // Student attended this lecture
         final attendance = attendanceByStudent[studentId]!;
+
         result.add({
           'student_id': studentId,
           'student_name': (attendance['student_name'] ?? '').toString(),
@@ -321,8 +374,12 @@ class ReportService {
           'section': (attendance['section'] ?? courseSection).toString(),
           'marked_manually': attendance['marked_manually'] ?? false,
         });
+
       } else {
+
+        // Student absent
         final user = usersById[studentId] ?? {};
+
         result.add({
           'student_id': studentId,
           'student_name':
@@ -344,6 +401,7 @@ class ReportService {
       }
     }
 
+    // Sort by status (Present -> Late -> Absent)
     result.sort((a, b) {
       const order = {'Present': 0, 'Late': 1, 'Absent': 2};
       return (order[a['status']] ?? 9).compareTo(order[b['status']] ?? 9);
@@ -352,239 +410,4 @@ class ReportService {
     return result;
   }
 
-  static Future<List<Map<String, dynamic>>>
-      getCourseStudentsForManualAttendance({
-    required String courseId,
-    required String lectureId,
-  }) async {
-    final enrollmentsSnapshot = await _db
-        .collection('enrollments')
-        .where('course_id', isEqualTo: courseId)
-        .get();
-
-    final usersSnapshot = await _db.collection('users').get();
-
-    final lectureAttendanceSnapshot = await _db
-        .collection('attendance')
-        .where('lecture_id', isEqualTo: lectureId)
-        .get();
-
-    final attendedStudentIds = lectureAttendanceSnapshot.docs
-        .map((e) => (e['student_id'] ?? '').toString())
-        .toSet();
-
-    final usersById = <String, Map<String, dynamic>>{};
-    for (final doc in usersSnapshot.docs) {
-      usersById[doc.id] = doc.data();
-    }
-
-    final result = <Map<String, dynamic>>[];
-
-    for (final enrollment in enrollmentsSnapshot.docs) {
-      final studentId = (enrollment['student_id'] ?? '').toString();
-      if (studentId.isEmpty || attendedStudentIds.contains(studentId)) continue;
-
-      final user = usersById[studentId] ?? {};
-      result.add({
-        'student_id': studentId,
-        'student_name':
-            (user['full_name'] ?? user['name'] ?? 'Unknown').toString(),
-        'student_email': (user['email'] ?? '').toString(),
-      });
-    }
-
-    result.sort((a, b) => (a['student_name'] ?? '')
-        .toString()
-        .compareTo((b['student_name'] ?? '').toString()));
-
-    return result;
-  }
-
-  // # GET ACTIVE OR LATEST LECTURE FOR MANUAL ATTENDANCE
-  static Future<Map<String, dynamic>?> getBestLectureForManualAttendance({
-    required String courseId,
-  }) async {
-    final activeSnapshot = await _db
-        .collection('lectures')
-        .where('course_id', isEqualTo: courseId)
-        .where('is_active', isEqualTo: true)
-        .get();
-
-    if (activeSnapshot.docs.isNotEmpty) {
-      final doc = activeSnapshot.docs.first;
-      final data = doc.data();
-      data['doc_id'] = doc.id;
-      return data;
-    }
-
-    final allLectures = await _db
-        .collection('lectures')
-        .where('course_id', isEqualTo: courseId)
-        .get();
-
-    if (allLectures.docs.isEmpty) return null;
-
-    allLectures.docs.sort((a, b) {
-      final aTime = a.data()['created_at'];
-      final bTime = b.data()['created_at'];
-
-      if (aTime is! Timestamp && bTime is! Timestamp) return 0;
-      if (aTime is! Timestamp) return 1;
-      if (bTime is! Timestamp) return -1;
-      return bTime.compareTo(aTime);
-    });
-
-    final doc = allLectures.docs.first;
-    final data = doc.data();
-    data['doc_id'] = doc.id;
-    return data;
-  }
-
-  static Future<void> markAttendanceManually({
-    required String lectureId,
-    required String lectureName,
-    required String courseId,
-    required String courseName,
-    required String section,
-    required String? building,
-    required String? room,
-    required String studentId,
-    required String studentName,
-    required String studentEmail,
-    required String status,
-  }) async {
-    final existing = await _db
-        .collection('attendance')
-        .where('lecture_id', isEqualTo: lectureId)
-        .where('student_id', isEqualTo: studentId)
-        .get();
-
-    if (existing.docs.isNotEmpty) {
-      for (final doc in existing.docs) {
-        await doc.reference.update({
-          'status': status,
-          'marked_manually': true,
-          'manual_by_lecturer': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
-      return;
-    }
-
-    await _db.collection('attendance').add({
-      'student_id': studentId,
-      'student_name': studentName,
-      'student_email': studentEmail,
-      'lecture_id': lectureId,
-      'lecture_name': lectureName,
-      'course_id': courseId,
-      'course_name': courseName,
-      'section': section,
-      'building': building,
-      'room': room,
-      'timestamp': FieldValue.serverTimestamp(),
-      'inside_university': false,
-      'on_university_wifi': false,
-      'wifi_ssid': null,
-      'status': status,
-      'marked_manually': true,
-      'manual_by_lecturer': true,
-    });
-  }
-
-  // # MANUAL ATTENDANCE FROM COURSE SCREEN
-  static Future<void> markAttendanceManuallyFromCourse({
-    required String courseId,
-    required String courseName,
-    required String studentId,
-    required String studentName,
-    required String studentEmail,
-    required String status,
-  }) async {
-    final lecture = await getBestLectureForManualAttendance(courseId: courseId);
-
-    if (lecture == null) {
-      throw 'Create a lecture first before manual attendance';
-    }
-
-    await markAttendanceManually(
-      lectureId: (lecture['doc_id'] ?? '').toString(),
-      lectureName: (lecture['name'] ?? 'Lecture').toString(),
-      courseId: courseId,
-      courseName: courseName,
-      section: (lecture['section'] ?? '').toString(),
-      building: lecture['building']?.toString(),
-      room: lecture['room']?.toString(),
-      studentId: studentId,
-      studentName: studentName,
-      studentEmail: studentEmail,
-      status: status,
-    );
-  }
-
-  static Future<void> deleteAttendance({
-    required String lectureId,
-    required String studentId,
-  }) async {
-    final snapshot = await _db
-        .collection('attendance')
-        .where('lecture_id', isEqualTo: lectureId)
-        .where('student_id', isEqualTo: studentId)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      await doc.reference.delete();
-    }
-  }
-
-  // # DELETE COURSE WITH RELATED DATA
-  static Future<void> deleteCourse(String courseId) async {
-    final lecturesSnapshot = await _db
-        .collection('lectures')
-        .where('course_id', isEqualTo: courseId)
-        .get();
-
-    for (final lecture in lecturesSnapshot.docs) {
-      final attendanceByLecture = await _db
-          .collection('attendance')
-          .where('lecture_id', isEqualTo: lecture.id)
-          .get();
-
-      for (final attendance in attendanceByLecture.docs) {
-        await attendance.reference.delete();
-      }
-
-      await lecture.reference.delete();
-    }
-
-    final attendanceByCourse = await _db
-        .collection('attendance')
-        .where('course_id', isEqualTo: courseId)
-        .get();
-
-    for (final doc in attendanceByCourse.docs) {
-      await doc.reference.delete();
-    }
-
-    final enrollmentsSnapshot = await _db
-        .collection('enrollments')
-        .where('course_id', isEqualTo: courseId)
-        .get();
-
-    for (final doc in enrollmentsSnapshot.docs) {
-      await doc.reference.delete();
-    }
-
-    await _db.collection('courses').doc(courseId).delete();
-  }
-
-  static Future<Map<String, dynamic>?> getLectureInfo(String lectureId) async {
-    final doc = await _db.collection('lectures').doc(lectureId).get();
-    return doc.data();
-  }
-
-  static Future<Map<String, dynamic>?> getCourseInfo(String courseId) async {
-    final doc = await _db.collection('courses').doc(courseId).get();
-    return doc.data();
-  }
-}
+  

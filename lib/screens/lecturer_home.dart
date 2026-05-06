@@ -1,65 +1,104 @@
+// Imports Dart async utilities, including Timer.
 import 'dart:async';
+// Imports Flutter Material UI components.
 import 'package:flutter/material.dart';
+// Imports Firebase Authentication for sign-out functionality.
 import 'package:firebase_auth/firebase_auth.dart';
+// Imports Cloud Firestore for database operations.
 import 'package:cloud_firestore/cloud_firestore.dart';
+// Imports QR Flutter package to display QR codes.
 import 'package:qr_flutter/qr_flutter.dart';
+// Imports the main app to access theme toggling.
 import 'package:smart_attendance_app/main.dart';
 
+// Imports the custom user model.
 import '../models/user.dart';
+// Imports report-related services.
 import '../services/report_service.dart';
+// Imports the lecture report screen.
 import 'lecture_report_screen.dart';
+// Imports the screen that displays students in a lecturer course.
 import 'lecturer_course_students_screen.dart';
+// Imports the login screen used after logout.
 import 'login_screen.dart';
 
+// Main lecturer home screen widget.
 class LecturerHome extends StatefulWidget {
+  // Stores the logged-in lecturer user data.
   final AppUser user;
 
+  // Creates the lecturer home screen with the required user.
   const LecturerHome({super.key, required this.user});
 
   @override
   State<LecturerHome> createState() => _LecturerHomeState();
 }
 
+// State class for LecturerHome.
 class _LecturerHomeState extends State<LecturerHome>
     with SingleTickerProviderStateMixin {
+  // Controls the tabs in the lecturer dashboard.
   late TabController _tabController;
 
+  // Controller for the course name input.
   final _courseName = TextEditingController();
+  // Controller for the section input.
   final _sectionController = TextEditingController();
+  // Controller for the lecture name input.
   final _lectureName = TextEditingController();
+  // Controller for the building input.
   final _buildingController = TextEditingController();
+  // Controller for the room input.
   final _roomController = TextEditingController();
 
+  // Stores the selected course ID.
   String? selectedCourseId;
+  // Stores the selected course name.
   String? selectedCourseName;
+  // Stores the selected course section.
   String? selectedCourseSection;
 
+  // Stores the selected QR duration in minutes.
   int selectedDurationMinutes = 10;
 
+  // Stores QR data to display in the QR widget.
   String? qrData;
+  // Stores the currently active lecture ID.
   String? activeLectureId;
+  // Stores the end time of the active lecture.
   DateTime? activeLectureEndTime;
+  // Tracks whether the active lecture QR is open.
   bool activeLectureOpen = false;
 
+  // Timer used to update the remaining QR time.
   Timer? _timer;
+  // Stores the remaining time before the QR closes.
   Duration _remaining = Duration.zero;
 
+  // Future used to load dashboard summary data.
   late Future<Map<String, dynamic>> dashboardFuture;
 
   @override
   void initState() {
     super.initState();
+    // Initializes the tab controller with three tabs.
     _tabController = TabController(length: 3, vsync: this);
+    // Loads the lecturer dashboard summary.
     dashboardFuture =
         ReportService.getLecturerDashboardSummary(lecturerId: widget.user.uid);
+    // Checks if there is already an active lecture.
     _loadActiveLecture();
+    // Starts the timer for QR countdown updates.
     _startTimer();
   }
 
   @override
   void dispose() {
+    // Cancels the timer to prevent memory leaks.
     _timer?.cancel();
+    // Disposes the tab controller.
     _tabController.dispose();
+    // Disposes text controllers to free resources.
     _courseName.dispose();
     _sectionController.dispose();
     _lectureName.dispose();
@@ -68,6 +107,7 @@ class _LecturerHomeState extends State<LecturerHome>
     super.dispose();
   }
 
+  // Loads the currently active lecture for this lecturer, if one exists.
   Future<void> _loadActiveLecture() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('lectures')
@@ -76,12 +116,14 @@ class _LecturerHomeState extends State<LecturerHome>
         .limit(1)
         .get();
 
+    // Stops if there is no active lecture.
     if (snapshot.docs.isEmpty) return;
 
     final doc = snapshot.docs.first;
     final data = doc.data();
     final endTime = data['end_time'];
 
+    // Updates local state with the active lecture data.
     setState(() {
       activeLectureId = doc.id;
       qrData = doc.id;
@@ -90,6 +132,7 @@ class _LecturerHomeState extends State<LecturerHome>
     });
   }
 
+  // Refreshes dashboard summary data.
   void _refreshDashboard() {
     setState(() {
       dashboardFuture = ReportService.getLecturerDashboardSummary(
@@ -98,6 +141,7 @@ class _LecturerHomeState extends State<LecturerHome>
     });
   }
 
+  // Shows a short snackbar notification.
   void _notify(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +149,7 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  // Shows an alert dialog with a title and message.
   void _showDialogMessage(String title, String message) {
     if (!mounted) return;
     showDialog(
@@ -122,6 +167,7 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  // Deletes a course after user confirmation.
   Future<void> _deleteCourse(String courseId, String courseName) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -141,19 +187,23 @@ class _LecturerHomeState extends State<LecturerHome>
       ),
     );
 
+    // Stops deletion if the user does not confirm.
     if (confirm != true) return;
 
+    // Deletes the course and refreshes the dashboard.
     await ReportService.deleteCourse(courseId);
     _refreshDashboard();
     _notify('Course deleted successfully');
   }
 
+  // Starts a periodic timer to update QR status and remaining time.
   void _startTimer() {
     _timer?.cancel();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!mounted) return;
 
+      // Resets countdown if there is no active lecture.
       if (activeLectureId == null) {
         setState(() {
           _remaining = Duration.zero;
@@ -162,11 +212,13 @@ class _LecturerHomeState extends State<LecturerHome>
         return;
       }
 
+      // Gets the active lecture document from Firestore.
       final doc = await FirebaseFirestore.instance
           .collection('lectures')
           .doc(activeLectureId)
           .get();
 
+      // Resets local state if the lecture document no longer exists.
       if (!doc.exists) {
         setState(() {
           _remaining = Duration.zero;
@@ -182,6 +234,7 @@ class _LecturerHomeState extends State<LecturerHome>
       final isActive = (data['is_active'] ?? false) == true;
       final endTime = data['end_time'];
 
+      // Stops countdown if the lecture is inactive or has no valid end time.
       if (!isActive || endTime is! Timestamp) {
         setState(() {
           _remaining = Duration.zero;
@@ -193,6 +246,7 @@ class _LecturerHomeState extends State<LecturerHome>
       final end = endTime.toDate();
       final diff = end.difference(DateTime.now());
 
+      // Closes the lecture when the QR duration expires.
       if (diff.isNegative || diff.inSeconds <= 0) {
         await doc.reference.update({'is_active': false});
 
@@ -209,10 +263,12 @@ class _LecturerHomeState extends State<LecturerHome>
         return;
       }
 
+      // Notifies the lecturer when only one minute remains.
       if (diff.inSeconds == 60) {
         _notify('Only 1 minute left before QR closes');
       }
 
+      // Updates QR state and countdown.
       setState(() {
         qrData = doc.id;
         activeLectureId = doc.id;
@@ -223,6 +279,7 @@ class _LecturerHomeState extends State<LecturerHome>
     });
   }
 
+  // Formats a Duration into HH:MM:SS or MM:SS.
   String _formatDuration(Duration d) {
     final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
@@ -235,6 +292,7 @@ class _LecturerHomeState extends State<LecturerHome>
     return '$minutes:$seconds';
   }
 
+  // Creates a new course in Firestore.
   Future<void> _createCourse() async {
     if (_courseName.text.trim().isEmpty) return;
 
@@ -245,20 +303,24 @@ class _LecturerHomeState extends State<LecturerHome>
       'created_at': FieldValue.serverTimestamp(),
     });
 
+    // Clears inputs and refreshes dashboard after course creation.
     _courseName.clear();
     _sectionController.clear();
     _refreshDashboard();
     _notify('Course created successfully');
   }
 
+  // Creates a new lecture linked to the selected course.
   Future<void> _createLecture() async {
     if (_lectureName.text.trim().isEmpty) return;
 
+    // Requires a course to be selected before creating a lecture.
     if (selectedCourseId == null || selectedCourseName == null) {
       _notify('Please select a course first');
       return;
     }
 
+    // Requires building and room information.
     if (_buildingController.text.trim().isEmpty ||
         _roomController.text.trim().isEmpty) {
       _notify('Please enter building and room');
@@ -267,6 +329,7 @@ class _LecturerHomeState extends State<LecturerHome>
 
     final doc = FirebaseFirestore.instance.collection('lectures').doc();
 
+    // Saves the lecture data in Firestore.
     await doc.set({
       'name': _lectureName.text.trim(),
       'lecturer_id': widget.user.uid,
@@ -280,6 +343,7 @@ class _LecturerHomeState extends State<LecturerHome>
       'is_active': false,
     });
 
+    // Clears lecture inputs and refreshes dashboard.
     _lectureName.clear();
     _buildingController.clear();
     _roomController.clear();
@@ -287,20 +351,24 @@ class _LecturerHomeState extends State<LecturerHome>
     _refreshDashboard();
   }
 
+  // Opens a lecture QR for the selected duration.
   Future<void> _openLectureQr(String lectureId) async {
     final now = DateTime.now();
     final end = now.add(Duration(minutes: selectedDurationMinutes));
 
+    // Finds all currently active lectures for this lecturer.
     final activeLectures = await FirebaseFirestore.instance
         .collection('lectures')
         .where('lecturer_id', isEqualTo: widget.user.uid)
         .where('is_active', isEqualTo: true)
         .get();
 
+    // Closes any previously active lecture before opening a new one.
     for (final doc in activeLectures.docs) {
       await doc.reference.update({'is_active': false});
     }
 
+    // Activates the selected lecture and sets its start and end time.
     await FirebaseFirestore.instance
         .collection('lectures')
         .doc(lectureId)
@@ -310,6 +378,7 @@ class _LecturerHomeState extends State<LecturerHome>
       'is_active': true,
     });
 
+    // Updates local QR state.
     setState(() {
       activeLectureId = lectureId;
       qrData = lectureId;
@@ -321,14 +390,17 @@ class _LecturerHomeState extends State<LecturerHome>
     _showDialogMessage('Lecture Started', 'QR is now active.');
   }
 
+  // Manually closes the currently active QR.
   Future<void> _closeLectureNow() async {
     if (activeLectureId == null) return;
 
+    // Marks the active lecture as inactive in Firestore.
     await FirebaseFirestore.instance
         .collection('lectures')
         .doc(activeLectureId)
         .update({'is_active': false});
 
+    // Clears active lecture state.
     setState(() {
       activeLectureOpen = false;
       _remaining = Duration.zero;
@@ -340,6 +412,7 @@ class _LecturerHomeState extends State<LecturerHome>
     _showDialogMessage('Lecture Closed', 'The QR code was closed manually.');
   }
 
+  // Builds a reusable dashboard statistics card.
   Widget _dashboardCard(String title, String value, IconData icon) {
     return Expanded(
       child: Card(
@@ -367,6 +440,7 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  // Builds the dashboard tab with summary cards and course list.
   Widget _dashboardTab() {
     final coursesStream = FirebaseFirestore.instance
         .collection('courses')
@@ -387,6 +461,7 @@ class _LecturerHomeState extends State<LecturerHome>
 
               final stats = snapshot.data!;
 
+              // Displays dashboard statistics.
               return Column(
                 children: [
                   Row(
@@ -442,6 +517,7 @@ class _LecturerHomeState extends State<LecturerHome>
 
               final docs = snapshot.data!.docs;
 
+              // Shows a message when there are no courses.
               if (docs.isEmpty) {
                 return const Card(
                   child: Padding(
@@ -451,6 +527,7 @@ class _LecturerHomeState extends State<LecturerHome>
                 );
               }
 
+              // Builds the list of lecturer courses.
               return Column(
                 children: docs.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
@@ -497,6 +574,7 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  // Builds the courses tab for creating and viewing courses.
   Widget _coursesTab() {
     final coursesStream = FirebaseFirestore.instance
         .collection('courses')
@@ -558,6 +636,7 @@ class _LecturerHomeState extends State<LecturerHome>
               return const Text('No courses yet');
             }
 
+            // Displays each course with student and delete actions.
             return Column(
               children: docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -603,6 +682,7 @@ class _LecturerHomeState extends State<LecturerHome>
     );
   }
 
+  // Builds the lectures tab for creating lectures, managing QR, and viewing reports.
   Widget _lecturesTab() {
     final coursesStream = FirebaseFirestore.instance
         .collection('courses')
@@ -643,6 +723,7 @@ class _LecturerHomeState extends State<LecturerHome>
                 return const Text('Create a course first');
               }
 
+              // Selects the first course by default if no course is selected.
               if (selectedCourseId == null) {
                 selectedCourseId = docs.first.id;
                 selectedCourseName = docs.first['name'];
@@ -736,6 +817,7 @@ class _LecturerHomeState extends State<LecturerHome>
             ),
           ),
           const SizedBox(height: 24),
+          // Shows the active QR card only when a QR is open.
           if (qrData != null && activeLectureOpen)
             Card(
               child: Padding(
@@ -799,6 +881,7 @@ class _LecturerHomeState extends State<LecturerHome>
 
               final docs = snapshot.data!.docs.toList();
 
+              // Sorts lectures from newest to oldest.
               docs.sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
@@ -817,6 +900,7 @@ class _LecturerHomeState extends State<LecturerHome>
                 return const Text('No lectures yet');
               }
 
+              // Builds the lecture list with QR and report actions.
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -902,6 +986,7 @@ class _LecturerHomeState extends State<LecturerHome>
 
   @override
   Widget build(BuildContext context) {
+    // Checks whether the current theme is dark mode.
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -931,10 +1016,12 @@ class _LecturerHomeState extends State<LecturerHome>
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              // Signs out the current Firebase user.
               await FirebaseAuth.instance.signOut();
 
               if (!context.mounted) return;
 
+              // Navigates back to login and removes previous routes.
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
